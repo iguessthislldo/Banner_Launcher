@@ -1,6 +1,8 @@
 #ifndef BANNER_LAUNCHER_HPP
 #define BANNER_LAUNCHER_HPP
 
+#include <stdlib.h>
+
 #include <vector>
 
 #include <QMainWindow>
@@ -11,7 +13,7 @@
 #include <QScrollArea>
 #include <QVBoxLayout>
 
-#include "Item.hpp"
+#include "Menu_Item.hpp"
 
 class Banner_Launcher : public QMainWindow
 {
@@ -25,7 +27,7 @@ private:
     QWidget *gui;
     QVBoxLayout *layout;
     QScrollArea *scroll_gui;
-    std::vector<Item *> items;
+    std::vector<Menu_Item *> items;
 };
 
 #endif // BANNER_LAUNCHER_HPP
