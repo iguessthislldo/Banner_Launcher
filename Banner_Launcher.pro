@@ -25,7 +25,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         Banner_Launcher.cpp \
-    Menu_Item.cpp
+    Menu_Item.cpp \
+    Path.cpp
 
 HEADERS  += Banner_Launcher.hpp \
-    Menu_Item.hpp
+    Menu_Item.hpp \
+    Path.hpp

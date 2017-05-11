@@ -1,8 +1,6 @@
 #ifndef BANNER_LAUNCHER_HPP
 #define BANNER_LAUNCHER_HPP
 
-#include <stdlib.h>
-
 #include <vector>
 
 #include <QMainWindow>
@@ -14,6 +12,7 @@
 #include <QVBoxLayout>
 
 #include "Menu_Item.hpp"
+#include "Path.hpp"
 
 class Banner_Launcher : public QMainWindow
 {
@@ -22,6 +21,9 @@ class Banner_Launcher : public QMainWindow
 public:
     Banner_Launcher(QWidget *parent = 0);
     ~Banner_Launcher();
+
+public slots:
+    void start();
 
 private:
     QWidget *gui;

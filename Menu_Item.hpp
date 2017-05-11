@@ -11,24 +11,31 @@
 #include <QPixmap>
 #include <QImage>
 
+#include "Path.hpp"
+
 class Menu_Item : public QLabel
 {
     Q_OBJECT
 
 public:
-    explicit Menu_Item(const QFileInfo& dir, QWidget* parent=0);
-   ~Menu_Item() {
+    explicit Menu_Item(const Path & path, QWidget* parent=0);
+    ~Menu_Item() {
        if (image != NULL) delete image;
-   }
+    }
+
+    bool is_valid();
 
 signals:
-   void clicked();
+    void clicked();
+
+public slots:
+    void run();
 
 protected:
-   void mousePressEvent(QMouseEvent* event);
+    void mousePressEvent(QMouseEvent* event);
 
 private:
-    QFileInfo dir;
+    Path path, executable;
     QImage * image = NULL;
 
 };
