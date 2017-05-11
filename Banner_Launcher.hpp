@@ -4,15 +4,10 @@
 #include <vector>
 
 #include <QMainWindow>
-#include <QDebug>
-#include <QDir>
-#include <QString>
-
 #include <QScrollArea>
-#include <QVBoxLayout>
+#include <QGridLayout>
 
 #include "Menu_Item.hpp"
-#include "Path.hpp"
 
 class Banner_Launcher : public QMainWindow
 {
@@ -21,13 +16,14 @@ class Banner_Launcher : public QMainWindow
 public:
     Banner_Launcher(QWidget *parent = 0);
     ~Banner_Launcher();
+    void keyPressEvent(QKeyEvent * event);
 
 public slots:
     void start();
 
 private:
     QWidget *gui;
-    QVBoxLayout *layout;
+    QGridLayout *layout;
     QScrollArea *scroll_gui;
     std::vector<Menu_Item *> items;
 };

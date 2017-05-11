@@ -25,6 +25,9 @@ public:
 
     bool is_valid();
 
+    const static unsigned banner_width = 460;
+    const static unsigned banner_height = 215;
+
 signals:
     void clicked();
 

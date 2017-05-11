@@ -1,16 +1,16 @@
-#include "Menu_Item.hpp"
-
 #include <errno.h>
 #include <error.h>
+#include <string>
+
 #include <QMessageBox>
 
-#include <string>
+#include "Menu_Item.hpp"
 
 static const char * IMAGE_FILENAME = "image";
 static const char * EXECUTABLE_FILENAME = "execute";
 
 Menu_Item::Menu_Item(const Path & path, QWidget* parent) : QLabel(parent) {
-    qDebug() << "    " << path.path().c_str();
+    qDebug() << "    " << path.c_str();
     this->path = path;
     this->executable = path / EXECUTABLE_FILENAME;
     setText(path.c_str());
@@ -22,8 +22,8 @@ Menu_Item::Menu_Item(const Path & path, QWidget* parent) : QLabel(parent) {
         qDebug() << "    No Image";
     }
 
-    setFixedWidth(460);
-    setFixedHeight(215);
+    setFixedWidth(banner_width);
+    setFixedHeight(banner_height);
 }
 
 void Menu_Item::mousePressEvent(QMouseEvent* event) {
@@ -39,7 +39,7 @@ void Menu_Item::run() {
     const char * exe_path = executable.c_str();
     qDebug() << execl((const char *) exe_path, (const char *) exe_path, (char *) NULL);
     QMessageBox::critical(
-        this, "Coundn't run program",
-        QString(exe_path) + ": " + strerror(errno)
+        this, "Couldn't run program",
+        QString("Couldn't run program:\n    \"") + exe_path + "\"\n    " + strerror(errno)
     );
 }
