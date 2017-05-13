@@ -1,3 +1,6 @@
+#include <string>
+#include <algorithm>
+
 #include <QDebug>
 #include <QMessageBox>
 #include <QTimer>
@@ -8,11 +11,11 @@
 #include "Path.hpp"
 
 const char * APPLICATION_DIRECTORY_NAME = "BannerLauncher";
-const unsigned ROW_SIZE = 4;
-const unsigned COL_SIZE = 3;
 
-Banner_Launcher::Banner_Launcher(QWidget *parent) : QMainWindow(parent) {
+Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_columns, QWidget *parent) : QMainWindow(parent) {
     QTimer::singleShot(0, this, SIGNAL(start()));
+
+    this->no_columns = no_columns;
 
     gui = new QWidget(this);
     layout = new QGridLayout(gui);
@@ -27,20 +30,14 @@ Banner_Launcher::Banner_Launcher(QWidget *parent) : QMainWindow(parent) {
     scroll_gui->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     setFixedSize(
-        Menu_Item::banner_width * COL_SIZE,
-        Menu_Item::banner_height * ROW_SIZE
+        Menu_Item::banner_width * no_columns,
+        Menu_Item::banner_height * window_height_in_rows
     );
 
     setCentralWidget(scroll_gui);
 }
 
-Banner_Launcher::~Banner_Launcher() {
-    delete gui;
-    delete layout;
-    delete scroll_gui;
-    for (Menu_Item * i : items)
-        delete i;
-}
+Banner_Launcher::~Banner_Launcher() { }
 
 void Banner_Launcher::start() {
     Path xdg_config_home = Path::xdg_config_home();
@@ -60,39 +57,57 @@ void Banner_Launcher::start() {
         application_directory.ensure_directory();
     }
 
-    // Add Menu Items
+    // Get Menu Items
     Menu_Item * item;
-    unsigned row = 0;
-    unsigned col = 0;
     for (auto & item_directory : application_directory.subdirectories()) {
         item = new Menu_Item(item_directory);
         if (item->is_valid()) {
-            layout->addWidget(item, row, col, 1, 1, Qt::AlignTop);
-            items.push_back(item);
-            col++;
-            if (col == COL_SIZE) {
-                col = 0;
-                row++;
-            }
-        item = new Menu_Item(item_directory);
+            all_items.push_back(item);
         } else {
             delete item;
         }
     }
 
-    // Try to correct Grid layout
-    int insert = ROW_SIZE - row;
-    qDebug() << "INSERT: " << insert;
-    qDebug() << "col: " << col;
-    if (col) insert--;
-    for (int i = 0; i < insert; i++) {
-        QSpacerItem * spacer = new QSpacerItem(Menu_Item::banner_width, Menu_Item::banner_height);
-        layout->addItem(spacer, row + i + 1, col);
-    }
+    all_items.sort(Menu_Item::compare);
+
+    set_displayed_items(all_items);
 }
 
 void Banner_Launcher::keyPressEvent(QKeyEvent * event) {
     if (event->key() == Qt::Key_Escape) {
         this->close();
+    } else if (event->key() == Qt::Key_F) {
+        displayed_items = all_items;
+        displayed_items.reverse();
+        set_displayed_items(displayed_items);
+    } else {
+        set_displayed_items(all_items);
+    }
+}
+
+void Banner_Launcher::set_displayed_items(const std::list<Menu_Item *> & items) {
+    // Removed all the items in layout
+    QLayoutItem * layout_item;
+    while((layout_item = layout->takeAt(0)))
+        delete layout_item;
+
+    // Add items to layout
+    unsigned row = 0;
+    unsigned col = 0;
+    for (auto item : items) {
+        layout->addWidget(item, row, col, 1, 1, Qt::AlignTop);
+        col++;
+        if (col == no_columns) {
+            col = 0;
+            row++;
+        }
+    }
+
+    // Try to correct Grid layout
+    int insert = 4 - row;
+    if (col) insert--;
+    for (int i = 0; i < insert; i++) {
+        QSpacerItem * spacer = new QSpacerItem(Menu_Item::banner_width, Menu_Item::banner_height);
+        layout->addItem(spacer, row + i + 1, col);
     }
 }

@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <regex>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -51,15 +53,23 @@ bool Path::is_directory() const {
     return (s.st_mode & S_IFMT) == S_IFDIR;
 }
 
-bool Path::is_parent_or_current() const {
-    return _path == "." || _path == "..";
-}
-
 bool Path::ensure_directory() {
     return !mkdir(c_str(), 0700);
 }
 
-std::list<Path> Path::subdirectories() const {
+std::string Path::get_name() const {
+    std::string rv;
+    std::regex re(".*/(.*)/?$");
+    std::smatch match;
+
+    std::regex_match(_path, match, re);
+    if (match.size())
+        rv = match[0];
+
+    return rv;
+}
+
+std::list<Path> Path::contents(Path_Type path_type) const {
     std::list<Path> result;
 
     DIR * directory;
@@ -70,17 +80,13 @@ std::list<Path> Path::subdirectories() const {
             struct dirent * i = readdir(directory);
             i != NULL; i = readdir(directory)
         ) {
-            if (parent) {
-                if(!strcmp(i->d_name, "..")) {
-                    parent = false;
-                    continue;
-                }
+            if (parent && !strcmp(i->d_name, "..")) {
+                parent = false;
+                continue;
             }
-            if (current) {
-                if(!strcmp(i->d_name, ".")) {
-                    current = false;
-                    continue;
-                }
+            if (current && !strcmp(i->d_name, ".")) {
+                current = false;
+                continue;
             }
 
             Path child = *this / i->d_name;
@@ -88,15 +94,22 @@ std::list<Path> Path::subdirectories() const {
             if (stat(child.c_str(), &s) == -1) {
                 continue;
             }
-            if ((s.st_mode & S_IFMT ) == S_IFDIR) {
+
+            if (
+                path_type == ANY ||
+                (path_type == FILE && ((s.st_mode & S_IFMT ) == S_IFREG)) ||
+                (path_type == DIRECTORY && ((s.st_mode & S_IFMT ) == S_IFDIR))
+            ) {
                 result.push_back(child);
-            } else {
-                continue;
             }
         }
     }
 
     return result;
+}
+
+std::list<Path> Path::subdirectories() const {
+    return contents(DIRECTORY);
 }
 
 Path Path::home() {

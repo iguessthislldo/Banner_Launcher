@@ -1,3 +1,7 @@
+/*
+ * Filesystem Abstraction Class inspired by python's pathlib and built around
+ * Unix file API's.
+ */
 #ifndef PATH_HEADER
 #define PATH_HEADER
 
@@ -11,6 +15,12 @@ public:
     Path(const Path & other);
     ~Path();
 
+    enum Path_Type {
+        ANY,
+        FILE,
+        DIRECTORY
+    };
+
     void path(const std::string & path);
     std::string path() const;
     const char * c_str() const;
@@ -18,10 +28,11 @@ public:
     bool exists() const;
     bool is_file() const;
     bool is_directory() const;
-    bool is_parent_or_current() const;
+    std::string get_name() const;
 
     bool ensure_directory();
 
+    std::list<Path> contents(Path_Type path_type) const;
     std::list<Path> subdirectories() const;
 
     static Path home();
