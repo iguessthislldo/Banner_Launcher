@@ -5,11 +5,8 @@
 #include <unistd.h> // execvp
 
 #include <QDebug>
-#include <QString>
-#include <QPixmap>
-#include <QMessageBox>
 
-#include "Menu_Item.hpp"
+#include "Entry.hpp"
 
 /*
  * Names of files in each entry's directory
@@ -18,19 +15,22 @@ static const char * IMAGE_FILENAME = "image";
 static const char * EXECUTABLE_FILENAME = "execute";
 static const char * COUNT_FILENAME = "count";
 
-Menu_Item::Menu_Item(const Path & path, QWidget* parent) : QLabel(parent) {
+Entry::Entry(const Path & path)
+{
     qDebug() << "    " << path.c_str();
+
     this->path = path;
     this->executable = path / EXECUTABLE_FILENAME;
-    setText(path.c_str());
+
+    // Image
     Path image_path = path / IMAGE_FILENAME;
     if (image_path.exists()) {
         image = new QImage(image_path.c_str());
-        setPixmap(QPixmap::fromImage(*image));
     } else {
         qDebug() << "    No Image";
     }
 
+    // Count
     Path count_path = path / COUNT_FILENAME;
     if (count_path.exists()) {
         FILE * file = fopen(count_path.c_str(), "r");
@@ -38,47 +38,45 @@ Menu_Item::Menu_Item(const Path & path, QWidget* parent) : QLabel(parent) {
         fclose(file);
     }
 
+    // Names
     name = path.get_name();
+    for (char c : name) {
+        if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ') {
+            filter_name.push_back(c);
+        } else if (c >= 'a' && c <= 'z') {
+            filter_name.push_back((c - 'a') + 'A');
+        }
+    }
+    qDebug() << "    Directory Name: \"" << path.get_name().c_str() << '\"';
+    qDebug() << "    Filter Name: \"" << filter_name.c_str() << '\"';
 
-    setFixedWidth(banner_width);
-    setFixedHeight(banner_height);
 }
 
-void Menu_Item::set_name(const std::string & name) {
-    this->name = name;
+Entry::~Entry() {
+    if (image != NULL) delete image;
 }
 
-std::string Menu_Item::get_name() {
+std::string Entry::get_name() {
     return this->name;
 }
 
-void Menu_Item::mousePressEvent(QMouseEvent* event) {
-    run();
-}
-
-bool Menu_Item::is_valid() {
+bool Entry::is_valid() {
     return executable.is_file();
 }
 
-unsigned Menu_Item::get_count() {
+unsigned Entry::get_count() {
     return count;
 }
 
-void Menu_Item::run() {
-    Path count_path = path / COUNT_FILENAME;
-    FILE * file = fopen(count_path.c_str(), "w");
-    fprintf(file, "%u\n", count+1);
-    fclose(file);
-
-    const char * exe_path = executable.c_str();
-    qDebug() << execl((const char *) exe_path, (const char *) exe_path, (char *) NULL);
-    QMessageBox::critical(
-        this, "Couldn't run program",
-        QString("Couldn't run program:\n    \"") + exe_path + "\"\n    " + strerror(errno)
-    );
+std::string Entry::get_filter_name() {
+    return filter_name;
 }
 
-bool Menu_Item::compare(Menu_Item * a, Menu_Item * b) {
+QImage & Entry::get_image() {
+    return *image;
+}
+
+bool Entry::compare(Entry * a, Entry * b) {
     if (a->get_count() < b->get_count())
         return false;
 
@@ -94,4 +92,21 @@ bool Menu_Item::compare(Menu_Item * a, Menu_Item * b) {
         b_lower[i] = std::tolower(b_lower[i]);
 
     return a_lower < b_lower;
+}
+
+std::string Entry::run() {
+    Path count_path = path / COUNT_FILENAME;
+    FILE * file = fopen(count_path.c_str(), "w");
+    fprintf(file, "%u\n", count + 1);
+    fclose(file);
+    const char * exe_path = executable.c_str();
+    execl((const char *) exe_path, (const char *) exe_path, (char *) NULL);
+    return std::string("Couldn't run program:\n    \"") + exe_path + "\"\n    " + strerror(errno);
+}
+
+Entry_Widget * Entry::get_widget() {
+    if (widget == NULL) {
+        this->widget = new Entry_Widget(this);
+    }
+    return this->widget;
 }

@@ -1,7 +1,9 @@
 #include <QApplication>
 
 #include "Banner_Launcher.hpp"
+
 #include "Path.hpp"
+#include <iostream>
 
 int main(int argc, char *argv[])
 {

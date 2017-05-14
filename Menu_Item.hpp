@@ -5,6 +5,7 @@
 
 #include <QLabel>
 #include <QImage>
+#include <QDebug>
 
 #include "Path.hpp"
 
@@ -15,11 +16,13 @@ class Menu_Item : public QLabel
 public:
     explicit Menu_Item(const Path & path, QWidget* parent=0);
     ~Menu_Item() {
-       if (image != NULL) delete image;
+        qDebug() << "Deleting" << path.c_str();
+        if (image != NULL) delete image;
     }
 
     void set_name(const std::string & name);
     std::string get_name();
+    std::string get_filter_name();
     unsigned get_count();
     bool is_valid();
 
@@ -47,7 +50,7 @@ protected:
 
 private:
     Path path, executable;
-    std::string name;
+    std::string name, filter_name;
     QImage * image = NULL;
     unsigned count = 0; // Run count
 };

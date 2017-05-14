@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <regex>
+#include <iostream>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -59,12 +60,12 @@ bool Path::ensure_directory() {
 
 std::string Path::get_name() const {
     std::string rv;
-    std::regex re(".*/(.*)/?$");
+    std::regex re("(.*\\/)?([^/]+)\\/?$");
     std::smatch match;
 
     std::regex_match(_path, match, re);
-    if (match.size())
-        rv = match[0];
+    if (match.size() == 3)
+        rv = match[2];
 
     return rv;
 }

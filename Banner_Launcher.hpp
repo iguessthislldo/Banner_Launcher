@@ -5,12 +5,15 @@
 #define BANNER_LAUNCHER_HPP
 
 #include <list>
+#include <string>
 
 #include <QMainWindow>
 #include <QScrollArea>
 #include <QGridLayout>
+#include <QSpacerItem>
 
-#include "Menu_Item.hpp"
+#include "Entry.hpp"
+#include "Entry_Widget.hpp"
 
 class Banner_Launcher : public QMainWindow
 {
@@ -21,19 +24,24 @@ public:
     ~Banner_Launcher();
 
     void keyPressEvent(QKeyEvent * event);
-    void set_displayed_items(const std::list<Menu_Item *> & items);
+    void set_displayed_entries(const std::list<Entry *> & entries);
+    void update_filter();
 
 public slots:
     void start();
 
 private:
     QWidget *gui;
-    QGridLayout *layout;
+    QGridLayout *layout = NULL;
     QScrollArea *scroll_gui;
 
+    std::list<Entry_Widget *> widgets;
+    std::list<QSpacerItem *> spacers;
+
     unsigned no_columns;
-    std::list<Menu_Item *> all_items;
-    std::list<Menu_Item *> displayed_items;
+    std::string filter;
+    std::list<Entry *> all_entries;
+    std::list<Entry *> displayed_entries;
 };
 
 #endif // BANNER_LAUNCHER_HPP

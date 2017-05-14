@@ -1,7 +1,18 @@
-/*
- * Filesystem Abstraction Class inspired by python's pathlib and built around
+/* Filesystem Abstraction Class inspired by python's pathlib and built around
  * Unix file API's.
  */
+
+// TODO: Build in more error detection and handling
+// TODO: SymLink detection and resolution
+// TODO: Relative and Absolute methods
+// TODO: get_parent method
+// TODO: Get File extension(s)
+// TODO: Get filename without extension(s)
+// TODO: Change Extension(s)
+// TODO: Permissions
+// TODO: Support Tilde and Shell variable expansion
+// TODO: Move/Copy/Remove/Touch
+
 #ifndef PATH_HEADER
 #define PATH_HEADER
 
