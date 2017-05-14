@@ -16,10 +16,11 @@ public:
     std::string get_name();
     const Path & get_path();
     std::string get_filter_name();
-    QImage & get_image();
+    QImage * get_image();
+    QImage & get_image_ref();
     unsigned get_count();
     bool is_valid();
-    Entry_Widget * get_widget();
+    Entry_Widget * get_widget(QWidget *parent = 0);
 
     std::string run();
 

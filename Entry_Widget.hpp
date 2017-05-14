@@ -25,6 +25,9 @@ public:
     const static unsigned banner_width = 460;
     const static unsigned banner_height = 215;
 
+    void draw_frame();
+    void draw_wo_frame();
+
 signals:
     void clicked();
 

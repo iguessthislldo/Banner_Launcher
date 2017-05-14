@@ -37,6 +37,7 @@ Entry::Entry(const Path & path)
         fscanf(file, "%u", &count);
         fclose(file);
     }
+    qDebug() << "    Count:" << count;
 
     // Names
     name = path.get_name();
@@ -72,7 +73,11 @@ std::string Entry::get_filter_name() {
     return filter_name;
 }
 
-QImage & Entry::get_image() {
+QImage * Entry::get_image() {
+    return image;
+}
+
+QImage & Entry::get_image_ref() {
     return *image;
 }
 
@@ -104,9 +109,9 @@ std::string Entry::run() {
     return std::string("Couldn't run program:\n    \"") + exe_path + "\"\n    " + strerror(errno);
 }
 
-Entry_Widget * Entry::get_widget() {
+Entry_Widget * Entry::get_widget(QWidget *parent) {
     if (widget == NULL) {
-        this->widget = new Entry_Widget(this);
+        this->widget = new Entry_Widget(this, parent);
     }
     return this->widget;
 }

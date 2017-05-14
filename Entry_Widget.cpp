@@ -7,10 +7,13 @@
 #include <QPixmap>
 #include <QMessageBox>
 
+#include <QPainter>
+#include <QColor>
+
 Entry_Widget::Entry_Widget(Entry * entry, QWidget *parent) : QLabel(parent) {
     this->entry = entry;
     setText(entry->get_name().c_str());
-    setPixmap(QPixmap::fromImage(entry->get_image()));
+    setPixmap(QPixmap::fromImage(entry->get_image_ref()));
     setFixedWidth(banner_width);
     setFixedHeight(banner_height);
 }
@@ -30,4 +33,21 @@ void Entry_Widget::run() {
         this, "Couldn't run program",
         QString(entry->run().c_str())
     );
+}
+
+void Entry_Widget::draw_frame() {
+    QColor c = Qt::green;
+    QImage img(entry->get_image_ref());
+    QPainter p(&img);
+    p.setPen(QPen(c));
+    p.setBrush(c);
+    p.drawRect(0, 0, banner_width, 2);
+    p.drawRect(0, banner_height - 2, banner_width, 2);
+    p.drawRect(0, 0, 2, banner_width);
+    p.drawRect(banner_width - 2, 0, 2, banner_width);
+    setPixmap(QPixmap::fromImage(img));
+}
+
+void Entry_Widget::draw_wo_frame() {
+    setPixmap(QPixmap::fromImage(entry->get_image_ref()));
 }

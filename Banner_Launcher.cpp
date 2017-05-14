@@ -68,20 +68,22 @@ void Banner_Launcher::start() {
         entry = new Entry(directory);
         if (entry->is_valid()) {
             all_entries.push_back(entry);
-            widgets.push_back(entry->get_widget());
+            widgets.push_back(entry->get_widget(this));
         } else {
             delete entry;
         }
     }
-    all_entries.sort(Entry::compare);
 
     set_displayed_entries(all_entries);
 }
 
 void Banner_Launcher::keyPressEvent(QKeyEvent * event) {
-    if (event->key() == Qt::Key_Escape) {
+    if (event->key() == Qt::Key_Escape) { // Close
         this->close();
-    } if (event->key() == Qt::Key_Backspace) {
+    } else if (event->key() == Qt::Key_Return) { // Enter Key
+        if (displayed_entries.size())
+            displayed_entries.front()->run();
+    } else if (event->key() == Qt::Key_Backspace) {
         unsigned size = filter.size();
         if (size) {
             filter.pop_back();
@@ -91,7 +93,7 @@ void Banner_Launcher::keyPressEvent(QKeyEvent * event) {
                 update_filter();
             }
         }
-    } else {
+    } else { // Add character to filter / search
         char c = (char) event->key();
         if (c >= 'a' && c <= 'z')
             c = (c - 'a') + 'A';
@@ -116,18 +118,10 @@ void Banner_Launcher::update_filter() {
 
 void Banner_Launcher::set_displayed_entries(const std::list<Entry *> & entries) {
     displayed_entries = entries;
-
-    /*
-    QSpacerItem * spacer;
-    while (spacers.size()) {
-        spacer = spacers.front();
-        spacers.pop_front();
-        layout->removeItem(spacer);
-        delete spacer;
-    }
-    */
+    displayed_entries.sort(Entry::compare);
 
     for (auto entry : all_entries) {
+        entry->get_widget()->draw_wo_frame();
         entry->get_widget()->hide();
     }
 
@@ -135,24 +129,18 @@ void Banner_Launcher::set_displayed_entries(const std::list<Entry *> & entries) 
         entry->get_widget()->show();
     }
 
+    if(displayed_entries.size())
+        displayed_entries.front()->get_widget()->draw_frame();
+
     // Add items to layout
     unsigned row = 0;
     unsigned col = 0;
-    for (auto entry : entries) {
-        layout->addWidget(entry->get_widget(), row, col, 1, 1, Qt::AlignTop);
+    for (auto entry : displayed_entries) {
+        entry->get_widget()->move(Entry_Widget::banner_width * col, Entry_Widget::banner_height * row);
         col++;
         if (col == no_columns) {
             col = 0;
             row++;
         }
-    }
-
-    // Try to correct Grid layout
-    int insert = 4 - row;
-    if (col) insert--;
-    for (int i = 0; i < insert; i++) {
-        QSpacerItem * spacer = new QSpacerItem(Entry_Widget::banner_width, Entry_Widget::banner_height);
-        spacers.push_back(spacer);
-        layout->addItem(spacer, row + i + 1, col);
     }
 }
