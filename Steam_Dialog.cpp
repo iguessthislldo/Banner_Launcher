@@ -69,7 +69,8 @@ void Steam_Dialog::add_game(const std::string &name, const std::string &id) {
 }
 
 void Steam_Dialog::get_installed_steam_apps() {
-    Path steam_apps = Path::home() / STEAMAPPS_PATH;
+    Path steam_apps = Path::home(); // TODO: Double free if these two lines are brought together,
+    steam_apps = steam_apps / STEAMAPPS_PATH; // at least for me at time of writing...
     std::string filename;
     for (auto & i : steam_apps.contents(Path::FILE)) {
         filename = i.get_name();

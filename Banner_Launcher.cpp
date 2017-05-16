@@ -61,7 +61,7 @@ void Banner_Launcher::start() {
     qDebug() << application_directory.path().c_str();
     if (!application_directory.exists()) {
         qDebug() << "    Doesn't Exist, creating...";
-        application_directory.ensure_directory();
+        application_directory.make_directory();
     }
 
     // Get Menu Items

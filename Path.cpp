@@ -2,18 +2,48 @@
 #include <string.h>
 
 #include <regex>
-#include <iostream>
+#include <sstream>
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <dirent.h>
+#include <pwd.h>
 
 #include "Path.hpp"
 
+/*
+ * Path_Exception
+ */
+
+Path_Exception::Path_Exception(const std::string &message) {
+    this->message = message;
+}
+
+const char * Path_Exception::what() const throw() {
+    return message.c_str();
+}
+
+/*
+ * Path
+ */
+
 Path::Path() { }
 
-Path::Path(const std::string & path) {
-    this->path(path);
+Path::Path(const std::string & path, bool expand_tilde) {
+    unsigned path_length = path.size();
+    if (expand_tilde && path_length && path.front() == '~') {
+        uid_t uid = geteuid();
+        struct passwd *pw = getpwuid(uid);
+        if (pw == NULL) {
+            std::stringstream ss;
+            ss << "Couldn't get current user: \"" << strerror(errno) << '\"';
+            throw Path_Exception(ss.str());
+        }
+        this->path(pw->pw_dir);
+    } else {
+        this->path(path);
+    }
 }
 
 Path::Path(const Path & other) {
@@ -22,23 +52,25 @@ Path::Path(const Path & other) {
 
 Path::~Path() { }
 
-void Path::path(const std::string & path) {
-    this->_path = path;
+void Path::path(const std::string & path) { this->_path = path; }
+std::string Path::path() const { return _path; }
+const char * Path::c_str() const { return _path.c_str(); }
+
+Path Path::cwd() {
+    char *cwd;
+    char buff[PATH_MAX + 1];
+    if ((cwd = getcwd(buff, PATH_MAX + 1)) == NULL) {
+        std::stringstream ss;
+        ss << "Couldn't get current working dictionay: \"" << strerror(errno) << '\"';
+        throw Path_Exception(ss.str());
+    }
+    return Path(cwd);
 }
 
-std::string Path::path() const {
-    return _path;
-}
-
-const char * Path::c_str() const {
-    return _path.c_str();
-}
-
-bool Path::exists() const {
-    struct stat s;
-    int rv = stat(c_str(), &s);
-    return !rv;
-}
+bool Path::exists() const { return access(c_str(), F_OK) == 0; }
+bool Path::is_readable() const { return access(c_str(), R_OK) == 0; }
+bool Path::is_writable() const { return access(c_str(), W_OK) == 0; }
+bool Path::is_executable() const { return access(c_str(), X_OK) == 0; }
 
 bool Path::is_file() const {
     struct stat s;
@@ -54,20 +86,25 @@ bool Path::is_directory() const {
     return (s.st_mode & S_IFMT) == S_IFDIR;
 }
 
-bool Path::ensure_directory() {
-    return !mkdir(c_str(), 0700);
+void Path::make_directory(mode_t mode) {
+    if (mkdir(c_str(), mode)) {
+        std::stringstream ss;
+        ss << "Couldn't create dictionay at\"" << _path
+           << "\": \""
+           << strerror(errno) << '\"';
+        throw Path_Exception(ss.str());
+    }
 }
 
 std::string Path::get_name() const {
-    std::string rv;
     std::regex re("(.*\\/)?([^/]+)\\/?$");
     std::smatch match;
 
     std::regex_match(_path, match, re);
     if (match.size() == 3)
-        rv = match[2];
+        return match[2];
 
-    return rv;
+    throw Path_Exception("Couldn't get name.");
 }
 
 std::list<Path> Path::contents(Path_Type path_type) const {
@@ -104,6 +141,13 @@ std::list<Path> Path::contents(Path_Type path_type) const {
                 result.push_back(child);
             }
         }
+        closedir(directory);
+    } else {
+        std::stringstream ss;
+        ss << "Couldn't open \"" << _path
+           << "\"as dictionary to list contents: \""
+           << strerror(errno) << '\"';
+        throw Path_Exception(ss.str());
     }
 
     return result;
@@ -114,7 +158,10 @@ std::list<Path> Path::subdirectories() const {
 }
 
 Path Path::home() {
-    return Path(getenv("HOME"));
+    char * home = getenv("HOME");
+    if (home == NULL)
+        throw Path_Exception("Couldn't get $HOME envriomental variable");
+    return Path(home);
 }
 
 Path Path::xdg_config_home() {
