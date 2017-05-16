@@ -69,6 +69,7 @@ public:
     bool is_readable() const;
     bool is_writable() const;
     bool is_executable() const;
+    void set_executable() const;
 
     // Path Resolution
     bool is_absolute() const;

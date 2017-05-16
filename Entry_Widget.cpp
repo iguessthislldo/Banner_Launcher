@@ -13,7 +13,8 @@
 Entry_Widget::Entry_Widget(Entry * entry, QWidget *parent) : QLabel(parent) {
     this->entry = entry;
     setText(entry->get_name().c_str());
-    setPixmap(QPixmap::fromImage(entry->get_image_ref()));
+    if (entry->get_image() != NULL)
+        setPixmap(QPixmap::fromImage(entry->get_image_ref()));
     setFixedWidth(banner_width);
     setFixedHeight(banner_height);
 }
@@ -36,18 +37,22 @@ void Entry_Widget::run() {
 }
 
 void Entry_Widget::draw_frame() {
-    QColor c = Qt::green;
-    QImage img(entry->get_image_ref());
-    QPainter p(&img);
-    p.setPen(QPen(c));
-    p.setBrush(c);
-    p.drawRect(0, 0, banner_width, 2);
-    p.drawRect(0, banner_height - 2, banner_width, 2);
-    p.drawRect(0, 0, 2, banner_width);
-    p.drawRect(banner_width - 2, 0, 2, banner_width);
-    setPixmap(QPixmap::fromImage(img));
+    if (entry->get_image() != NULL) {
+        QColor c = Qt::green;
+        QImage img(entry->get_image_ref());
+        QPainter p(&img);
+        p.setPen(QPen(c));
+        p.setBrush(c);
+        p.drawRect(0, 0, banner_width, 2);
+        p.drawRect(0, banner_height - 2, banner_width, 2);
+        p.drawRect(0, 0, 2, banner_width);
+        p.drawRect(banner_width - 2, 0, 2, banner_width);
+        setPixmap(QPixmap::fromImage(img));
+    }
 }
 
 void Entry_Widget::draw_wo_frame() {
-    setPixmap(QPixmap::fromImage(entry->get_image_ref()));
+    if (entry->get_image() != NULL) {
+        setPixmap(QPixmap::fromImage(entry->get_image_ref()));
+    }
 }

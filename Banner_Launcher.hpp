@@ -26,6 +26,8 @@ public:
     void set_displayed_entries(const std::list<Entry *> & entries);
     void update_filter();
 
+    static Path get_application_directory();
+
 public slots:
     void start();
     void ShowContextMenu(const QPoint &pos);
@@ -36,6 +38,8 @@ private:
     QScrollArea *scroll_gui;
 
     std::list<Entry_Widget *> widgets;
+
+    static Path application_directory;
 
     unsigned no_columns;
     std::string filter;

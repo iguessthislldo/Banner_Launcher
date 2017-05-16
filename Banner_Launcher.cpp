@@ -17,6 +17,8 @@
 
 const char * APPLICATION_DIRECTORY_NAME = "BannerLauncher";
 
+Path Banner_Launcher::application_directory = Path();
+
 Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_columns, QWidget *parent) : QMainWindow(parent) {
     QTimer::singleShot(0, this, SIGNAL(start()));
 
@@ -42,11 +44,7 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
     );
 
     setCentralWidget(scroll_gui);
-}
 
-Banner_Launcher::~Banner_Launcher() { }
-
-void Banner_Launcher::start() {
     Path xdg_config_home = Path::xdg_config_home();
     qDebug() << xdg_config_home.path().c_str();
     if (!xdg_config_home.exists()) {
@@ -57,13 +55,17 @@ void Banner_Launcher::start() {
         this->close();
     }
 
-    Path application_directory = xdg_config_home / APPLICATION_DIRECTORY_NAME;
+    application_directory = xdg_config_home / APPLICATION_DIRECTORY_NAME;
     qDebug() << application_directory.path().c_str();
     if (!application_directory.exists()) {
         qDebug() << "    Doesn't Exist, creating...";
         application_directory.make_directory();
     }
+}
 
+Banner_Launcher::~Banner_Launcher() { }
+
+void Banner_Launcher::start() {
     // Get Menu Items
     Entry * entry;
     for (auto & directory : application_directory.subdirectories()) {
@@ -77,6 +79,10 @@ void Banner_Launcher::start() {
     }
 
     set_displayed_entries(all_entries);
+}
+
+Path Banner_Launcher::get_application_directory() {
+    return application_directory;
 }
 
 void Banner_Launcher::keyPressEvent(QKeyEvent * event) {
@@ -160,4 +166,5 @@ void Banner_Launcher::ShowContextMenu(const QPoint &pos) {
 void Banner_Launcher::show_steam_dialog() {
     Steam_Dialog * steam_dialog = new Steam_Dialog(this);
     steam_dialog->exec();
+    start();
 }

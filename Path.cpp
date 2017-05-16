@@ -71,6 +71,13 @@ bool Path::exists() const { return access(c_str(), F_OK) == 0; }
 bool Path::is_readable() const { return access(c_str(), R_OK) == 0; }
 bool Path::is_writable() const { return access(c_str(), W_OK) == 0; }
 bool Path::is_executable() const { return access(c_str(), X_OK) == 0; }
+void Path::set_executable() const {
+    char mode[] = "0777";
+    int i = strtol(mode, 0, 8);
+    if (chmod (c_str(), i) < 0) {
+        exit(1);
+    }
+}
 
 bool Path::is_file() const {
     struct stat s;

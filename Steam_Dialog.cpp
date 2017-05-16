@@ -10,6 +10,7 @@
 #include "Path.hpp"
 #include "Steam_Dialog.hpp"
 #include "util.hpp"
+#include "Banner_Launcher.hpp"
 
 Steam_Dialog::Steam_Dialog(QWidget *parent) : QDialog(parent) {
     setMinimumWidth(420);
@@ -185,5 +186,20 @@ void Steam_Dialog::enable_row(unsigned row) {
 }
 
 void Steam_Dialog::accept() {
+    for (int row = 0; row < table_widget->rowCount(); row++) {
+        QTableWidgetItem * check_item = table_widget->item(row, 0);
+        if (check_item->checkState() == Qt::Checked) {
+            QTableWidgetItem * name_item = table_widget->item(row, 2);
+            Path path = Banner_Launcher::get_application_directory() / name_item->text().toStdString();
+            path.make_directory();
+
+            QTableWidgetItem * id_item = table_widget->item(row, 1);
+            Path execute = path / "execute";
+            FILE * file = fopen(execute.c_str(), "w");
+            fprintf(file, "#!/bin/bash\nexec /bin/sh -c '\"$HOME/.local/share/Steam/steam.sh\" \"steam://run/%s\"\'\n", id_item->text().toStdString().c_str());
+            fclose(file);
+            execute.set_executable();
+        }
+    }
     close();
 }
