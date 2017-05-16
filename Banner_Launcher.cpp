@@ -6,10 +6,14 @@
 #include <QTimer>
 #include <QSpacerItem>
 #include <QKeyEvent>
+#include <QMenu>
+#include <QAction>
 
 #include "Banner_Launcher.hpp"
 #include "Path.hpp"
 #include "Entry_Widget.hpp"
+
+#include "Steam_Dialog.hpp"
 
 const char * APPLICATION_DIRECTORY_NAME = "BannerLauncher";
 
@@ -18,15 +22,7 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
 
     this->no_columns = no_columns;
 
-    // Window
-    //   gui
-    //     layout
-
     gui = new QWidget(this);
-    layout = new QGridLayout(gui);
-    layout->setSpacing(0);
-    layout->setMargin(0);
-    gui->setLayout(layout);
     scroll_gui = new QScrollArea;
     scroll_gui->setStyleSheet("background-color: #383838;");
     scroll_gui->setWidgetResizable(true);
@@ -37,6 +33,12 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
     setFixedSize(
         Entry_Widget::banner_width * no_columns,
         Entry_Widget::banner_height * window_height_in_rows
+    );
+
+    setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(
+        this, SIGNAL(customContextMenuRequested(const QPoint &)),
+        this, SLOT(ShowContextMenu(const QPoint &))
     );
 
     setCentralWidget(scroll_gui);
@@ -143,4 +145,19 @@ void Banner_Launcher::set_displayed_entries(const std::list<Entry *> & entries) 
             row++;
         }
     }
+}
+
+void Banner_Launcher::ShowContextMenu(const QPoint &pos) {
+    QMenu contextMenu(tr("Context menu"), this);
+
+    QAction action1("Add Steam Games...", this);
+    connect(&action1, SIGNAL(triggered()), this, SLOT(show_steam_dialog()));
+    contextMenu.addAction(&action1);
+
+    contextMenu.exec(mapToGlobal(pos));
+}
+
+void Banner_Launcher::show_steam_dialog() {
+    Steam_Dialog * steam_dialog = new Steam_Dialog(this);
+    steam_dialog->exec();
 }

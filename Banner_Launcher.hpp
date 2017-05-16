@@ -9,11 +9,10 @@
 
 #include <QMainWindow>
 #include <QScrollArea>
-#include <QGridLayout>
-#include <QSpacerItem>
 
 #include "Entry.hpp"
 #include "Entry_Widget.hpp"
+#include "Steam_Dialog.hpp"
 
 class Banner_Launcher : public QMainWindow
 {
@@ -29,14 +28,14 @@ public:
 
 public slots:
     void start();
+    void ShowContextMenu(const QPoint &pos);
+    void show_steam_dialog();
 
 private:
     QWidget *gui;
-    QGridLayout *layout = NULL;
     QScrollArea *scroll_gui;
 
     std::list<Entry_Widget *> widgets;
-    std::list<QSpacerItem *> spacers;
 
     unsigned no_columns;
     std::string filter;

@@ -27,9 +27,15 @@ SOURCES += main.cpp\
         Banner_Launcher.cpp \
     Path.cpp \
     Entry.cpp \
-    Entry_Widget.cpp
+    Entry_Widget.cpp \
+    Steam_Dialog.cpp \
+    util.cpp
 
 HEADERS  += Banner_Launcher.hpp \
     Path.hpp \
     Entry.hpp \
-    Entry_Widget.hpp
+    Entry_Widget.hpp \
+    util.hpp \
+    Steam_Dialog.hpp
+
+unix: LIBS += -lcurl
