@@ -26,6 +26,8 @@ Entry::Entry(const Path & path)
     Path image_path = path / IMAGE_FILENAME;
     if (image_path.exists()) {
         image = new QImage(image_path.c_str());
+        // Rescale image becuase it might not be 460x215
+        *image = image->scaled(Entry_Widget::banner_width, Entry_Widget::banner_height);
     } else {
         qDebug() << "    No Image";
     }
@@ -114,4 +116,12 @@ Entry_Widget * Entry::get_widget(QWidget *parent) {
         this->widget = new Entry_Widget(this, parent);
     }
     return this->widget;
+}
+
+std::string Entry::steam_id() {
+    return _steam_id;
+}
+
+void Entry::steam_id(const std::string & value) {
+    _steam_id = value;
 }

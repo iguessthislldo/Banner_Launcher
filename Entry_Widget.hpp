@@ -33,6 +33,7 @@ signals:
 
 public slots:
     void run();
+    void ShowContextMenu(const QPoint &pos);
 
 protected:
     void mousePressEvent(QMouseEvent* event);

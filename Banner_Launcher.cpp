@@ -27,7 +27,7 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
     gui = new QWidget(this);
     scroll_gui = new QScrollArea;
     scroll_gui->setStyleSheet("background-color: #383838;");
-    scroll_gui->setWidgetResizable(true);
+    //scroll_gui->setWidgetResizable(true);
     scroll_gui->setWidget(gui);
     scroll_gui->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scroll_gui->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -61,6 +61,18 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
         qDebug() << "    Doesn't Exist, creating...";
         application_directory.make_directory();
     }
+
+    font.setPointSize(16);
+    search_text = new QLabel(this);
+    search_text->move(10, 10);
+    search_text->setText("");
+    search_text->setMaximumWidth(0);
+    search_text->setFont(font);
+    search_text->setStyleSheet("QLabel {"
+        "background-color: #383838;"
+        "color: #00ff00;"
+    "}");
+    search_text->hide();
 }
 
 Banner_Launcher::~Banner_Launcher() { }
@@ -72,7 +84,7 @@ void Banner_Launcher::start() {
         entry = new Entry(directory);
         if (entry->is_valid()) {
             all_entries.push_back(entry);
-            widgets.push_back(entry->get_widget(this));
+            widgets.push_back(entry->get_widget(gui));
         } else {
             delete entry;
         }
@@ -86,6 +98,7 @@ Path Banner_Launcher::get_application_directory() {
 }
 
 void Banner_Launcher::keyPressEvent(QKeyEvent * event) {
+    auto key = event->key();
     if (event->key() == Qt::Key_Escape) { // Close
         this->close();
     } else if (event->key() == Qt::Key_Return) { // Enter Key
@@ -96,21 +109,27 @@ void Banner_Launcher::keyPressEvent(QKeyEvent * event) {
         if (size) {
             filter.pop_back();
             if (size == 1) {
+                search_text->hide();
+                search_text->setText("");
                 set_displayed_entries(all_entries);
             } else {
+                search_text->setText(QString::fromStdString(filter));
+                int size = search_text->fontMetrics().width(QString::fromStdString(filter));
+                search_text->setMaximumWidth(size);
+                search_text->setMinimumWidth(size);
                 update_filter();
             }
         }
-    } else { // Add character to filter / search
-        char c = (char) event->key();
-        if (c >= 'a' && c <= 'z')
-            c = (c - 'a') + 'A';
-        if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ' ') {
+    // Add character to filter / search
+    } else if ((key >= Qt::Key_A && key <= Qt::Key_Z) || (key >= Qt::Key_0 && key <= Qt::Key_9) || key == Qt::Key_Space) {
+            char c = (char) event->key();
             filter.push_back(c);
+            search_text->setMinimumWidth(search_text->fontMetrics().width(QString::fromStdString(filter)));
+            search_text->show();
+            search_text->setText(QString::fromStdString(filter));
             std::cerr << filter << std::endl;
             std::cerr.flush();
             update_filter();
-        }
     }
 }
 
@@ -137,7 +156,7 @@ void Banner_Launcher::set_displayed_entries(const std::list<Entry *> & entries) 
         entry->get_widget()->show();
     }
 
-    if(displayed_entries.size())
+    if (displayed_entries.size())
         displayed_entries.front()->get_widget()->draw_frame();
 
     // Add items to layout
@@ -151,20 +170,33 @@ void Banner_Launcher::set_displayed_entries(const std::list<Entry *> & entries) 
             row++;
         }
     }
+
+    gui->resize(
+        Entry_Widget::banner_width * no_columns,
+        Entry_Widget::banner_height * (
+            displayed_entries.size() / no_columns + (displayed_entries.size() % no_columns ? 1 : 0)
+        )
+    );
 }
 
 void Banner_Launcher::ShowContextMenu(const QPoint &pos) {
-    QMenu contextMenu(tr("Context menu"), this);
+    QMenu contextMenu("Context menu", this);
 
-    QAction action1("Add Steam Games...", this);
-    connect(&action1, SIGNAL(triggered()), this, SLOT(show_steam_dialog()));
-    contextMenu.addAction(&action1);
+    QAction add_game("Add Game...", this);
+    contextMenu.addAction(&add_game);
+
+    QAction add_steam_games("Add Steam Games...", this);
+    connect(&add_steam_games, SIGNAL(triggered()), this, SLOT(show_steam_dialog()));
+    contextMenu.addAction(&add_steam_games);
 
     contextMenu.exec(mapToGlobal(pos));
 }
 
 void Banner_Launcher::show_steam_dialog() {
     Steam_Dialog * steam_dialog = new Steam_Dialog(this);
-    steam_dialog->exec();
-    start();
+    if (steam_dialog->exec()) {
+        for (auto i : children())
+            i->deleteLater();
+        start();
+    }
 }

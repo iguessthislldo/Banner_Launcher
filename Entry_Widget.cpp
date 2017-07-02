@@ -4,6 +4,8 @@
 #include <QMouseEvent>
 #include <QDebug>
 #include <QString>
+#include <QMenu>
+#include <QAction>
 #include <QPixmap>
 #include <QMessageBox>
 
@@ -17,6 +19,12 @@ Entry_Widget::Entry_Widget(Entry * entry, QWidget *parent) : QLabel(parent) {
         setPixmap(QPixmap::fromImage(entry->get_image_ref()));
     setFixedWidth(banner_width);
     setFixedHeight(banner_height);
+
+    setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(
+        this, SIGNAL(customContextMenuRequested(const QPoint &)),
+        this, SLOT(ShowContextMenu(const QPoint &))
+    );
 }
 
 Entry_Widget::~Entry_Widget() { }
@@ -55,4 +63,14 @@ void Entry_Widget::draw_wo_frame() {
     if (entry->get_image() != NULL) {
         setPixmap(QPixmap::fromImage(entry->get_image_ref()));
     }
+}
+
+void Entry_Widget::ShowContextMenu(const QPoint &pos) {
+    QMenu contextMenu(tr("Context menu"), this);
+
+    QAction add_game("Add Game...", this);
+    add_game.setEnabled(false);
+    contextMenu.addAction(&add_game);
+
+    contextMenu.exec(mapToGlobal(pos));
 }

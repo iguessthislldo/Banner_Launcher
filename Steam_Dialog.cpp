@@ -194,12 +194,16 @@ void Steam_Dialog::accept() {
             path.make_directory();
 
             QTableWidgetItem * id_item = table_widget->item(row, 1);
+            std::string id = id_item->text().toStdString();
             Path execute = path / "execute";
             FILE * file = fopen(execute.c_str(), "w");
-            fprintf(file, "#!/bin/bash\nexec /bin/sh -c '\"$HOME/.local/share/Steam/steam.sh\" \"steam://run/%s\"\'\n", id_item->text().toStdString().c_str());
+            fprintf(file, "#!/bin/bash\nexec /bin/sh -c '\"$HOME/.local/share/Steam/steam.sh\" \"steam://run/%s\"\'\n", id.c_str());
             fclose(file);
             execute.set_executable();
+
+            get_steam_banner(id, path / "image");
         }
     }
+    done(1);
     close();
 }

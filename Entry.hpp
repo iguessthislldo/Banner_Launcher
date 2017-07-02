@@ -13,6 +13,8 @@ public:
     Entry(const Path & path);
     ~Entry();
 
+    std::string steam_id();
+    void steam_id(const std::string & value);
     std::string get_name();
     const Path & get_path();
     std::string get_filter_name();
@@ -33,7 +35,7 @@ public:
 private:
     Entry_Widget * widget = NULL;
     Path path, executable;
-    std::string name, filter_name;
+    std::string name, filter_name, _steam_id;
     QImage * image = NULL;
     unsigned count = 0; // Run count
 };

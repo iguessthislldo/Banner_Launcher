@@ -8,7 +8,9 @@
 #include <string>
 
 #include <QMainWindow>
+#include <QLabel>
 #include <QScrollArea>
+#include <QFont>
 
 #include "Entry.hpp"
 #include "Entry_Widget.hpp"
@@ -36,6 +38,9 @@ public slots:
 private:
     QWidget *gui;
     QScrollArea *scroll_gui;
+    QLabel *search_text;
+
+    QFont font;
 
     std::list<Entry_Widget *> widgets;
 
