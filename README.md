@@ -1,5 +1,5 @@
 # Banner Launcher
-![Example of Usage](example.webm)
+![Example of Usage](example.gif)
 
 Banner Launcher is an launcher designed for launching games displayed with a
 Steam banner/header image. They are 460x215 sized images which are used in the
