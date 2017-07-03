@@ -23,19 +23,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 
-SOURCES += main.cpp\
-        Banner_Launcher.cpp \
-    Path.cpp \
-    Entry.cpp \
-    Entry_Widget.cpp \
-    Steam_Dialog.cpp \
-    util.cpp
-
-HEADERS  += Banner_Launcher.hpp \
-    Path.hpp \
-    Entry.hpp \
-    Entry_Widget.hpp \
-    util.hpp \
-    Steam_Dialog.hpp
+include(source/source.pri)
+include(include/include.pri)
+INCLUDEPATH += include
 
 unix: LIBS += -lcurl
