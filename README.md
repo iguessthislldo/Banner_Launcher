@@ -3,15 +3,15 @@
 
 Banner Launcher is an launcher designed for launching games displayed with a
 Steam banner/header image. They are 460x215 sized images which are used in the
-grid view of the Steam Client. Banner Launcher can be used to launch steam
-steam, non steam games, and really any application.
+grid view of the Steam Client. Banner Launcher can be used to launch any
+application.
 
 Banner Launcher is written using Qt5 with QT Creator.
 
 ## Usage
 The application works as is but is still a little rough around the edges.
-The ability to add steam games is working but the menus used to access this
-functionality is a work in progress.
+The ability to add installed steam games is working but the menus used to
+access this functionality is a work in progress.
 
 Once the applications have games to use, the applications are displayed by
 usage and alphabetically. The highlighted entry will be ran if enter is
