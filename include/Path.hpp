@@ -99,6 +99,7 @@ public:
     void rmfr() const; // Recursive Delete
     std::list<Path> contents(Path_Type path_type) const;
     std::list<Path> subdirectories() const;
+    void cd();
 
     // Static Common path functions
     static Path root();

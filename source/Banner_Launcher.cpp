@@ -8,6 +8,7 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QAction>
+#include <QJsonDocument>
 
 #include "Banner_Launcher.hpp"
 #include "Path.hpp"
@@ -16,26 +17,28 @@
 #include "Steam_Dialog.hpp"
 
 const char * APPLICATION_DIRECTORY_NAME = "BannerLauncher";
+const char * CONFIG_FILE_NAME = "config.json";
+const char * HEADER_DIRECTORY_NAME = "headers";
+const char * DEFAULT_BG_COLOR = "#383838";
+const char * DEFAULT_FG_COLOR = "#00ff00";
+const char * DEFAULT_STEAM_PATH = "~/.local/share/Steam";
 
-Path Banner_Launcher::application_directory = Path();
+Banner_Launcher * application = NULL;
 
 Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_columns, QWidget *parent) : QMainWindow(parent) {
+    // Populate Entry widgets which requires Qt to be fully working
     QTimer::singleShot(0, this, SIGNAL(start()));
 
-    this->no_columns = no_columns;
+    // Set application global variable
+    application = this;
 
+    // Entry GUI
     gui = new QWidget(this);
     scroll_gui = new QScrollArea;
-    scroll_gui->setStyleSheet("background-color: #383838;");
-    //scroll_gui->setWidgetResizable(true);
     scroll_gui->setWidget(gui);
     scroll_gui->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scroll_gui->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
-    setFixedSize(
-        Entry_Widget::banner_width * no_columns,
-        Entry_Widget::banner_height * window_height_in_rows
-    );
+    setCentralWidget(scroll_gui);
 
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(
@@ -43,8 +46,7 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
         this, SLOT(ShowContextMenu(const QPoint &))
     );
 
-    setCentralWidget(scroll_gui);
-
+    // Data
     Path xdg_config_home = Path::xdg_config_home();
     qDebug() << xdg_config_home.path().c_str();
     if (!xdg_config_home.exists()) {
@@ -57,44 +59,65 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
 
     application_directory = xdg_config_home / APPLICATION_DIRECTORY_NAME;
     qDebug() << application_directory.path().c_str();
-    if (!application_directory.exists()) {
+    bool new_config = !application_directory.exists();
+    if (new_config) {
         qDebug() << "    Doesn't Exist, creating...";
         application_directory.make_directory();
     }
 
-    font.setPointSize(16);
-    search_text = new QLabel(this);
-    search_text->move(10, 10);
-    search_text->setText("");
-    search_text->setMaximumWidth(0);
-    search_text->setFont(font);
-    search_text->setStyleSheet("QLabel {"
-        "background-color: #383838;"
-        "color: #00ff00;"
+    header_directory = application_directory / HEADER_DIRECTORY_NAME;
+
+    config_file = application_directory / CONFIG_FILE_NAME;
+    if (new_config) {
+        bg_color = DEFAULT_BG_COLOR;
+        fg_color = DEFAULT_FG_COLOR;
+        steam_directory = Path(DEFAULT_STEAM_PATH, true);
+        save();
+    } else {
+        load();
+    }
+
+    // Continue GUI
+    setStyleSheet(QString("* {"
+        "background-color: ") + bg_color + ";"
+        "color: " + fg_color + ";"
     "}");
-    search_text->hide();
+
+    this->no_columns = no_columns;
+    setFixedSize(
+        Entry_Widget::banner_width * no_columns,
+        Entry_Widget::banner_height * window_height_in_rows
+    );
+
+    // Labels
+
+    font.setPointSize(16);
+
+    // "No Entries" Label
+    no_entires_label = new QLabel(this);
+    no_entires_label->setFont(font);
+    //no_entires_label->hide();
+    QString no_entries_string = "No entries found, maybe add some?";
+    no_entires_label->setText(no_entries_string);
+    int no_entries_width = no_entires_label->fontMetrics().width(no_entries_string);
+    QPoint point = this->rect().center();
+    point.setX(point.x() - no_entries_width/2);
+    no_entires_label->setMinimumWidth(no_entries_width);
+    no_entires_label->move(point);
+
+    // Filter/Search Label
+    filter_label = new QLabel(this);
+    filter_label->move(this->rect().center());
+    filter_label->setText("");
+    filter_label->setMaximumWidth(0);
+    filter_label->setFont(font);
+    filter_label->hide();
 }
 
 Banner_Launcher::~Banner_Launcher() { }
 
 void Banner_Launcher::start() {
-    // Get Menu Items
-    Entry * entry;
-    for (auto & directory : application_directory.subdirectories()) {
-        entry = new Entry(directory);
-        if (entry->is_valid()) {
-            all_entries.push_back(entry);
-            widgets.push_back(entry->get_widget(gui));
-        } else {
-            delete entry;
-        }
-    }
-
-    set_displayed_entries(all_entries);
-}
-
-Path Banner_Launcher::get_application_directory() {
-    return application_directory;
+    set_displayed_entries(all_entries, false);
 }
 
 void Banner_Launcher::keyPressEvent(QKeyEvent * event) {
@@ -107,43 +130,43 @@ void Banner_Launcher::keyPressEvent(QKeyEvent * event) {
     } else if (event->key() == Qt::Key_Backspace) {
         unsigned size = filter.size();
         if (size) {
-            filter.pop_back();
+            filter.chop(1);
             if (size == 1) {
-                search_text->hide();
-                search_text->setText("");
-                set_displayed_entries(all_entries);
+                filter_label->hide();
+                filter_label->setText("");
+                set_displayed_entries(all_entries, true);
             } else {
-                search_text->setText(QString::fromStdString(filter));
-                int size = search_text->fontMetrics().width(QString::fromStdString(filter));
-                search_text->setMaximumWidth(size);
-                search_text->setMinimumWidth(size);
+                filter_label->setText(filter);
+                int size = filter_label->fontMetrics().width(filter);
+                filter_label->setMaximumWidth(size);
+                filter_label->setMinimumWidth(size);
                 update_filter();
             }
         }
     // Add character to filter / search
     } else if ((key >= Qt::Key_A && key <= Qt::Key_Z) || (key >= Qt::Key_0 && key <= Qt::Key_9) || key == Qt::Key_Space) {
+        if (all_entries.size()) {
             char c = (char) event->key();
             filter.push_back(c);
-            search_text->setMinimumWidth(search_text->fontMetrics().width(QString::fromStdString(filter)));
-            search_text->show();
-            search_text->setText(QString::fromStdString(filter));
-            std::cerr << filter << std::endl;
-            std::cerr.flush();
+            filter_label->setMinimumWidth(filter_label->fontMetrics().width(filter));
+            filter_label->show();
+            filter_label->setText(filter);
             update_filter();
+        }
     }
 }
 
 void Banner_Launcher::update_filter() {
     std::list<Entry *> new_entries;
     for (auto i : all_entries) {
-        if (!i->get_filter_name().compare(0, filter.size(), filter)) {
+        if (!i->filter_name().compare(filter)) {
             new_entries.push_front(i);
         }
     }
-    set_displayed_entries(new_entries);
+    set_displayed_entries(new_entries, true);
 }
 
-void Banner_Launcher::set_displayed_entries(const std::list<Entry *> & entries) {
+void Banner_Launcher::set_displayed_entries(const std::list<Entry *> & entries, bool is_filtered) {
     displayed_entries = entries;
     displayed_entries.sort(Entry::compare);
 
@@ -152,23 +175,28 @@ void Banner_Launcher::set_displayed_entries(const std::list<Entry *> & entries) 
         entry->get_widget()->hide();
     }
 
-    for (auto entry : entries) {
-        entry->get_widget()->show();
-    }
-
-    if (displayed_entries.size())
-        displayed_entries.front()->get_widget()->draw_frame();
-
-    // Add items to layout
-    unsigned row = 0;
-    unsigned col = 0;
-    for (auto entry : displayed_entries) {
-        entry->get_widget()->move(Entry_Widget::banner_width * col, Entry_Widget::banner_height * row);
-        col++;
-        if (col == no_columns) {
-            col = 0;
-            row++;
+    if (entries.size()) {
+        no_entires_label->hide();
+        for (auto entry : entries) {
+            entry->get_widget()->show();
         }
+
+        if (displayed_entries.size())
+            displayed_entries.front()->get_widget()->draw_frame();
+
+        // Add items to layout
+        unsigned row = 0;
+        unsigned col = 0;
+        for (auto entry : displayed_entries) {
+            entry->get_widget()->move(Entry_Widget::banner_width * col, Entry_Widget::banner_height * row);
+            col++;
+            if (col == no_columns) {
+                col = 0;
+                row++;
+            }
+        }
+    } else if (!is_filtered) {
+        no_entires_label->show();
     }
 
     gui->resize(
@@ -199,4 +227,63 @@ void Banner_Launcher::show_steam_dialog() {
             i->deleteLater();
         start();
     }
+}
+
+void Banner_Launcher::load() {
+    qDebug() << "LOAD:" << config_file.c_str();
+    // Read File
+    QFile f(config_file.c_str());
+    f.open(QIODevice::ReadOnly);
+    QByteArray a = f.readAll();
+    f.close();
+
+    // Default Values
+    QJsonObject entries;
+
+    // Parse first level JSON
+    QJsonDocument d = QJsonDocument::fromJson(a);
+    if (d.isNull()) {
+        qDebug() << "Invalid Config";
+        return;
+    }
+    QJsonObject o = d.object();
+    qDebug() << o;
+    for (const auto & i : o.keys()) {
+        if (i == "bg_color") {
+            bg_color = o[i].toString();
+        } else if (i == "fg_color") {
+            fg_color = o[i].toString();
+        } else if (i == "steam_path") {
+            steam_directory = Path(o[i].toString().toStdString());
+        } else if (i == "next_id"){
+            next_id = o[i].toInt();
+        } else if (i == "entries"){
+            entries = o[i].toObject();
+        }
+    }
+
+    Entry * entry;
+    QJsonObject entry_json;
+    for (const auto & entry_id : entries.keys()) {
+        entry_json = entries.take(entry_id).toObject();
+        entry = new Entry(entry_id, entry_json);
+        if (entry->is_valid()) {
+            all_entries.push_back(entry);
+            widgets.push_back(entry->get_widget(gui));
+        } else {
+            delete entry;
+        }
+    }
+}
+
+void Banner_Launcher::save() {
+
+}
+
+Path Banner_Launcher::get_application_directory() {
+    return application_directory;
+}
+
+Path Banner_Launcher::get_header_directory() {
+    return header_directory;
 }

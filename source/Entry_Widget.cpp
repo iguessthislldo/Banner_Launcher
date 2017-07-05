@@ -14,9 +14,9 @@
 
 Entry_Widget::Entry_Widget(Entry * entry, QWidget *parent) : QLabel(parent) {
     this->entry = entry;
-    setText(entry->get_name().c_str());
-    if (entry->get_image() != NULL)
-        setPixmap(QPixmap::fromImage(entry->get_image_ref()));
+    setText(entry->name());
+    if (entry->image_ptr() != NULL)
+        setPixmap(QPixmap::fromImage(entry->image_ref()));
     setFixedWidth(banner_width);
     setFixedHeight(banner_height);
 
@@ -33,21 +33,21 @@ void Entry_Widget::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
         run();
     } else if (event->button() == Qt::RightButton) {
-        qDebug() << "Right Button Pressed on \"" << this->entry->get_name().c_str() << '\"';
+        qDebug() << "Right Button Pressed on \"" << this->entry->name() << '\"';
     }
 }
 
 void Entry_Widget::run() {
     QMessageBox::critical(
         this, "Couldn't run program",
-        QString(entry->run().c_str())
+        entry->run()
     );
 }
 
 void Entry_Widget::draw_frame() {
-    if (entry->get_image() != NULL) {
+    if (entry->image_ptr() != NULL) {
         QColor c = Qt::green;
-        QImage img(entry->get_image_ref());
+        QImage img(entry->image_ref());
         QPainter p(&img);
         p.setPen(QPen(c));
         p.setBrush(c);
@@ -60,8 +60,8 @@ void Entry_Widget::draw_frame() {
 }
 
 void Entry_Widget::draw_wo_frame() {
-    if (entry->get_image() != NULL) {
-        setPixmap(QPixmap::fromImage(entry->get_image_ref()));
+    if (entry->image_ptr() != NULL) {
+        setPixmap(QPixmap::fromImage(entry->image_ref()));
     }
 }
 

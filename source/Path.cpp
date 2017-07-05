@@ -6,7 +6,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
+#include <unistd.h> // chdir
 #include <dirent.h>
 #include <pwd.h>
 
@@ -162,6 +162,12 @@ std::list<Path> Path::contents(Path_Type path_type) const {
 
 std::list<Path> Path::subdirectories() const {
     return contents(DIRECTORY);
+}
+
+void Path::cd() {
+    if (chdir(c_str())) {
+        throw Path_Exception(std::string("Couldn't change to \"") + _path + "\": " + strerror(errno));
+    }
 }
 
 Path Path::home() {

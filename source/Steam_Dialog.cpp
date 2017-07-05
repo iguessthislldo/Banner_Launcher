@@ -190,7 +190,7 @@ void Steam_Dialog::accept() {
         QTableWidgetItem * check_item = table_widget->item(row, 0);
         if (check_item->checkState() == Qt::Checked) {
             QTableWidgetItem * name_item = table_widget->item(row, 2);
-            Path path = Banner_Launcher::get_application_directory() / name_item->text().toStdString();
+            Path path = application->get_application_directory() / name_item->text().toStdString();
             path.make_directory();
 
             QTableWidgetItem * id_item = table_widget->item(row, 1);

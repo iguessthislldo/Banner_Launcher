@@ -5,16 +5,17 @@
 #define BANNER_LAUNCHER_HPP
 
 #include <list>
-#include <string>
 
 #include <QMainWindow>
 #include <QLabel>
 #include <QScrollArea>
 #include <QFont>
+#include <QString>
 
 #include "Entry.hpp"
 #include "Entry_Widget.hpp"
 #include "Steam_Dialog.hpp"
+#include "Path.hpp"
 
 class Banner_Launcher : public QMainWindow
 {
@@ -24,11 +25,18 @@ public:
     Banner_Launcher(float window_height_in_rows, unsigned no_columns, QWidget *parent = 0);
     ~Banner_Launcher();
 
+    /*
+     * Load and save from config.json
+     */
+    void load();
+    void save();
+
     void keyPressEvent(QKeyEvent * event);
-    void set_displayed_entries(const std::list<Entry *> & entries);
+    void set_displayed_entries(const std::list<Entry *> & entries, bool is_filtered);
     void update_filter();
 
-    static Path get_application_directory();
+    Path get_application_directory();
+    Path get_header_directory();
 
 public slots:
     void start();
@@ -38,18 +46,23 @@ public slots:
 private:
     QWidget *gui;
     QScrollArea *scroll_gui;
-    QLabel *search_text;
+    QLabel * filter_label, * no_entires_label;
 
     QFont font;
 
     std::list<Entry_Widget *> widgets;
 
-    static Path application_directory;
+    Path application_directory,
+         header_directory,
+         steam_directory,
+         config_file;
 
-    unsigned no_columns;
-    std::string filter;
+    unsigned no_columns, next_id;
+    QString filter, bg_color, fg_color;
     std::list<Entry *> all_entries;
     std::list<Entry *> displayed_entries;
 };
+
+extern Banner_Launcher * application;
 
 #endif // BANNER_LAUNCHER_HPP
