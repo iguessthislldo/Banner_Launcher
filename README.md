@@ -13,20 +13,19 @@ The application works as is but is still a little rough around the edges.
 The ability to add installed steam games is working but the menus used to
 access this functionality is a work in progress.
 
-Once the applications have games to use, the applications are displayed by
+Once the application has games to use, the applications are displayed by
 usage and alphabetically. The highlighted entry will be ran if enter is
 pressed. Typing will filter the entries. This is ASCII only at the momment.
 
-To mannually add games, a directory must be made in .config/Banner\_Launcher
-named for the game with the contents being a executable file called execute
-and a image called image. The image can be JPEG, PNG, or, [any other format
-supported by Qt5](http://doc.qt.io/qt-5/qtimageformats-index.html). It
-should be 460x215 but it will be scaled to 460x215 regardless.
+Games are defined in `config.json` in the config directory, which is 
+`~/.config/BannerLauncher"` by default.
+The image can be JPEG, PNG, or, any other
+[format supported by Qt5](http://doc.qt.io/qt-5/qtimageformats-index.html).
+It should be 460x215 but it will be scaled to 460x215 regardless.
 
 ## Major Todos
 - Finish Menus
 - Ability to add non-steam games
-- Restructure XDG config directory
 - Make Filtering/Searching more proper.
 - Custom Colors, size, other options
 - Command Line Arguments

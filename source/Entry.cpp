@@ -10,9 +10,11 @@
 #include "Entry.hpp"
 
 Entry::Entry(unsigned id) {
+    _id = QString::number(id);
 }
 
 Entry::Entry(const QString & id, const QJsonObject & json) {
+    _id = id;
     for (const auto & key : json.keys()) {
         if (key == "name") {
             qDebug() << json[key].toString();
@@ -20,11 +22,12 @@ Entry::Entry(const QString & id, const QJsonObject & json) {
         } else if (key == "steam_id") {
             _steam_id = json[key].toString();
         } else if (key == "image") {
-            load_image(application->get_header_directory() / Path(json[key].toString().toStdString()));
+            _image_path = json[key].toString();
+            load_image();
         } else if (key == "execute") {
             _execute = json[key].toString();
         } else if (key == "count") {
-            _count = json[key].toInt();
+            _count = json[key].toVariant().toUInt();
         } else if (key == "cd") {
             _cd = json[key].toString();
         }
@@ -71,13 +74,29 @@ unsigned Entry::count() {
     return _count;
 }
 
-void Entry::load_image(const Path & path) {
-    if (path.exists()) {
-        _image = new QImage(path.c_str());
-        // Rescale image becuase it might not be 460x215
-        *_image = _image->scaled(Entry_Widget::banner_width, Entry_Widget::banner_height);
-    } else {
-        qDebug() << "Image doesn't exist:" << path.c_str();
+QString Entry::image_path() {
+    return _image_path;
+}
+
+void Entry::image_path(const QString & value) {
+    if (_image != NULL) {
+        delete _image;
+        _image = NULL;
+    }
+    _image_path = value;
+}
+
+void Entry::load_image() {
+    if (_image_path.size() && _image == NULL) {
+        Path img_path = application->get_header_directory() / _image_path.toStdString();
+        qDebug() << "Loading Image:" << img_path.c_str();
+        if (img_path.exists()) {
+            _image = new QImage(img_path.c_str());
+            // Rescale image becuase it might not be 460x215
+            *_image = _image->scaled(Entry_Widget::banner_width, Entry_Widget::banner_height);
+        } else {
+            qDebug() << "    Image doesn't exist";
+        }
     }
 }
 
@@ -88,7 +107,6 @@ QImage * Entry::image_ptr() {
 QImage & Entry::image_ref() {
     return *_image;
 }
-
 
 bool Entry::is_valid() {
     if (!_filter_name.size()) {
@@ -128,6 +146,7 @@ QString Entry::run() {
     /*
     _count++;
     application->save();
+
     if (_steam_id.size()) { // Run Steam App
 
     } else { // Run Executable
@@ -142,9 +161,27 @@ QString Entry::run() {
     return "?";
 }
 
-Entry_Widget * Entry::get_widget(QWidget *parent) {
+void Entry::set_parent(QWidget *parent) {
     if (widget == NULL) {
         this->widget = new Entry_Widget(this, parent);
     }
+}
+
+Entry_Widget * Entry::get_widget() {
     return this->widget;
+}
+
+QJsonObject Entry::toJSON() {
+    QJsonObject o;
+    o["name"] = _name;
+    o["count"] = QString::number(_count);
+    o["image"] = _image_path;
+    if (_steam_id.size()) {
+        o["steam_id"] = _steam_id;
+    } else {
+        o["execute"] = _execute;
+        if (_cd.size())
+            o["cd"] = _cd;
+    }
+    return o;
 }

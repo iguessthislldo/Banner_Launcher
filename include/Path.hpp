@@ -1,5 +1,5 @@
 /* Filesystem Abstraction Class inspired by python's pathlib and built around
- * Unix file API's.
+ * Unix file APIs.
  */
 
 // TODO: Build in more error detection and handling

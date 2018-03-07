@@ -35,12 +35,13 @@ Path::Path(const std::string & path, bool expand_tilde) {
     if (expand_tilde && path_length && path.front() == '~') {
         uid_t uid = geteuid();
         struct passwd *pw = getpwuid(uid);
+        std::stringstream ss;
         if (pw == NULL) {
-            std::stringstream ss;
             ss << "Couldn't get current user: \"" << strerror(errno) << '\"';
             throw Path_Exception(ss.str());
         }
-        this->path(pw->pw_dir);
+        ss << pw->pw_dir << path.substr(1);
+        this->path(ss.str());
     } else {
         this->path(path);
     }

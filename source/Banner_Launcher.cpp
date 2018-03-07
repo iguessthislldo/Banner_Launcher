@@ -16,17 +16,11 @@
 
 #include "Steam_Dialog.hpp"
 
-const char * APPLICATION_DIRECTORY_NAME = "BannerLauncher";
-const char * CONFIG_FILE_NAME = "config.json";
-const char * HEADER_DIRECTORY_NAME = "headers";
-const char * DEFAULT_BG_COLOR = "#383838";
-const char * DEFAULT_FG_COLOR = "#00ff00";
-const char * DEFAULT_STEAM_PATH = "~/.local/share/Steam";
-
 Banner_Launcher * application = NULL;
 
 Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_columns, QWidget *parent) : QMainWindow(parent) {
-    // Populate Entry widgets which requires Qt to be fully working
+
+    // Populate gui with Entry widgets after Qt fully initializes
     QTimer::singleShot(0, this, SIGNAL(start()));
 
     // Set application global variable
@@ -59,29 +53,25 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
 
     application_directory = xdg_config_home / APPLICATION_DIRECTORY_NAME;
     qDebug() << application_directory.path().c_str();
+    header_directory = application_directory / HEADER_DIRECTORY_NAME;
     bool new_config = !application_directory.exists();
     if (new_config) {
-        qDebug() << "    Doesn't Exist, creating...";
+        qDebug() << "    Config doesn't exist, creating...";
         application_directory.make_directory();
+        header_directory.make_directory();
     }
-
-    header_directory = application_directory / HEADER_DIRECTORY_NAME;
 
     config_file = application_directory / CONFIG_FILE_NAME;
     if (new_config) {
         bg_color = DEFAULT_BG_COLOR;
         fg_color = DEFAULT_FG_COLOR;
         steam_directory = Path(DEFAULT_STEAM_PATH, true);
+        update_colors();
         save();
     } else {
         load();
+        update_colors();
     }
-
-    // Continue GUI
-    setStyleSheet(QString("* {"
-        "background-color: ") + bg_color + ";"
-        "color: " + fg_color + ";"
-    "}");
 
     this->no_columns = no_columns;
     setFixedSize(
@@ -116,7 +106,15 @@ Banner_Launcher::Banner_Launcher(float window_height_in_rows, unsigned no_column
 
 Banner_Launcher::~Banner_Launcher() { }
 
+void Banner_Launcher::update_colors() {
+    setStyleSheet(QString("* {"
+        "background-color: ") + bg_color + ";"
+        "color: " + fg_color + ";"
+    "}");
+}
+
 void Banner_Launcher::start() {
+    update_entries();
     set_displayed_entries(all_entries, false);
 }
 
@@ -223,8 +221,6 @@ void Banner_Launcher::ShowContextMenu(const QPoint &pos) {
 void Banner_Launcher::show_steam_dialog() {
     Steam_Dialog * steam_dialog = new Steam_Dialog(this);
     if (steam_dialog->exec()) {
-        for (auto i : children())
-            i->deleteLater();
         start();
     }
 }
@@ -256,7 +252,7 @@ void Banner_Launcher::load() {
         } else if (i == "steam_path") {
             steam_directory = Path(o[i].toString().toStdString());
         } else if (i == "next_id"){
-            next_id = o[i].toInt();
+            next_id = o[i].toVariant().toUInt();
         } else if (i == "entries"){
             entries = o[i].toObject();
         }
@@ -268,16 +264,36 @@ void Banner_Launcher::load() {
         entry_json = entries.take(entry_id).toObject();
         entry = new Entry(entry_id, entry_json);
         if (entry->is_valid()) {
-            all_entries.push_back(entry);
-            widgets.push_back(entry->get_widget(gui));
+            add_entry(entry);
         } else {
             delete entry;
         }
     }
+
 }
 
 void Banner_Launcher::save() {
+    // Basic Information
+    QJsonObject config_object;
+    config_object["bg_color"] = bg_color;
+    config_object["fg_color"] = fg_color;
+    config_object["steam_path"] = steam_directory.c_str();
+    config_object["next_id"] = QString::number(next_id);
 
+    // Entries
+    QJsonObject entries;
+    for (Entry * entry : all_entries) {
+        entries[entry->id()] = entry->toJSON();
+    }
+    config_object["entries"] = entries;
+
+    // Write File
+    QJsonDocument config_document;
+    config_document.setObject(config_object);
+    QFile f(config_file.c_str());
+    f.open(QIODevice::WriteOnly);
+    f.write(config_document.toJson());
+    f.close();
 }
 
 Path Banner_Launcher::get_application_directory() {
@@ -286,4 +302,42 @@ Path Banner_Launcher::get_application_directory() {
 
 Path Banner_Launcher::get_header_directory() {
     return header_directory;
+}
+
+Path Banner_Launcher::get_steam_directory() {
+    return steam_directory;
+}
+
+std::list<QString> & Banner_Launcher::get_steam_ids() {
+    return steam_ids;
+}
+
+std::string Banner_Launcher::get_steam_header_url_head() {
+    std::string steam_header_url_head = DEFAULT_STEAM_HEADER_URL_HEAD;
+    return steam_header_url_head;
+}
+
+std::string Banner_Launcher::get_steam_header_url_tail() {
+    std::string steam_header_url_tail = DEFAULT_STEAM_HEADER_URL_TAIL;
+    return steam_header_url_tail;
+}
+
+unsigned Banner_Launcher::get_next_id() {
+    return next_id++;
+}
+
+void Banner_Launcher::add_entry(Entry * entry) {
+    if (entry->steam_id().size())
+        steam_ids.push_back(entry->steam_id());
+    all_entries.push_back(entry);
+}
+
+void Banner_Launcher::update_entries() {
+    for (auto i : gui->children())
+        i->deleteLater();
+
+    for (Entry * entry : all_entries) {
+        entry->load_image();
+        entry->set_parent(gui);
+    }
 }

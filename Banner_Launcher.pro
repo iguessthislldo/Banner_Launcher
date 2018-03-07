@@ -28,3 +28,9 @@ include(include/include.pri)
 INCLUDEPATH += include
 
 unix: LIBS += -lcurl
+
+HEADERS += \
+    include/Config.hpp
+
+SOURCES += \
+    include/Config.cpp

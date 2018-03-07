@@ -48,11 +48,14 @@ public:
     /*
      * Image to display.
      */
-    void load_image(const Path & path);
+    QString image_path();
+    void image_path(const QString & value);
+    void load_image();
     QImage * image_ptr();
     QImage & image_ref();
 
-    Entry_Widget * get_widget(QWidget *parent = 0);
+    void set_parent(QWidget *parent);
+    Entry_Widget * get_widget();
 
     /*
      * Run the Entry. If successful, the program will be replaced. Otherwise
@@ -68,13 +71,19 @@ public:
     bool is_valid();
 
     /*
+     * Return QJsonObject of this Entry
+     */
+    QJsonObject toJSON();
+
+    /*
      * Compare first by the count, then using built in string compare on the
      * entry name.
      */
     static bool compare(Entry * a, Entry * b);
 
+
 private:
-    QString _id, _name, _filter_name, _steam_id, _execute, _cd;
+    QString _id, _name, _filter_name, _steam_id, _execute, _cd, _image_path;
     unsigned _count = 0;
     QImage * _image = NULL;
     Entry_Widget * widget = NULL;
