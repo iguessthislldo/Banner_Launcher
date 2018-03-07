@@ -7,6 +7,7 @@
 #include <gtk/gtk.h>
 
 #include "Entry.h"
+#include "steam.h"
 
 #define NAME
 #define BANNER_WIDTH 460
@@ -15,9 +16,23 @@
 
 Entries * all_entries;
 
+gchar * steam_path;
+
 gchar * config_dir;
 gchar * entries_file;
 gchar * banners_dir;
+
+bool load_config(const gchar * path) {
+    GKeyFile * ini = g_key_file_new();
+    if (g_key_file_load_from_file(
+        ini, path, G_KEY_FILE_NONE, NULL
+    )) {
+        
+        return false;
+    } else {
+        return true;
+    }
+}
 
 bool load_entries(Entries * entries, const gchar * path) {
     GKeyFile * ini = g_key_file_new();
@@ -28,10 +43,10 @@ bool load_entries(Entries * entries, const gchar * path) {
         gchar ** groups = g_key_file_get_groups(ini, &num_groups);
         for (gsize i = 0; i < num_groups; i++) {
             Entry * entry = Entry_new();
-            entry->name = g_key_file_get_value(ini, groups[i], "name", NULL);
+            entry->name = g_key_file_get_string(ini, groups[i], "name", NULL);
             gchar * image_file = g_build_filename(
                 banners_dir,
-                g_key_file_get_value(ini, groups[i], "image", NULL),
+                g_key_file_get_string(ini, groups[i], "image", NULL),
             NULL);
             entry->image = gtk_image_new_from_file(image_file);
             g_free(image_file);
