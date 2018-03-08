@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "Entry.h"
 
@@ -38,19 +39,23 @@ void Entries_insert(Entries * entries, Entry * entry) {
 
 void Entries_delete(Entries * entries) {
     Node * next = entries->head;
-    for (Node * node = next; next; next = node->next) {
+    for (Node * node = next; node; node = next) {
+        next = node->next;
         free(node);
     }
 }
 
 void Entries_delete_all(Entries * entries) {
     Node * next = entries->head;
-    for (Node * node = next; next; next = node->next) {
-        g_free(node->entry->name);
-        g_free(node->entry->image_path);
-        if (node->entry->exec) g_free(node->entry->exec);
-        if (node->entry->cd) g_free(node->entry->cd);
-        free(node->entry);
+    for (Node * node = next; node; node = next) {
+        Entry * entry = node->entry;
+        g_free(entry->name);
+        g_free(entry->image_path);
+        if (entry->exec) g_free(entry->exec);
+        if (entry->cd) g_free(entry->cd);
+        free(entry);
+
+        next = node->next;
         free(node);
     }
 }
