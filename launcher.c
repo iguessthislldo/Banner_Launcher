@@ -1,47 +1,53 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include <glib.h>
 #include <gtk/gtk.h>
 
-#include "Entry.h"
+#include "launcher.h"
 #include "steam.h"
 
-#define NAME
-#define BANNER_WIDTH 460
-#define BANNER_HIGHT 215
-#define GRID_WIDTH 3
-
-Entries * all_entries;
-
-gchar * steam_path;
-
-gchar * config_dir;
-gchar * entries_file;
-gchar * banners_dir;
-
 bool load_config(const gchar * path) {
-    GKeyFile * ini = g_key_file_new();
-    if (g_key_file_load_from_file(
-        ini, path, G_KEY_FILE_NONE, NULL
-    )) {
-        
-        return false;
-    } else {
-        return true;
-    }
-}
-
-bool load_entries(Entries * entries, const gchar * path) {
+    bool error = false;
+    if (debug) printf("Loading config from %s\n", path);
     GKeyFile * ini = g_key_file_new();
     if (g_key_file_load_from_file(
         ini, path, G_KEY_FILE_NONE, NULL
     )) {
         gsize num_groups;
         gchar ** groups = g_key_file_get_groups(ini, &num_groups);
-        for (gsize i = 0; i < num_groups; i++) {
+        if (num_groups == 1 && !strcmp(groups[0], "config")) {
+            printf("  steam_path: %s\n",
+                g_key_file_get_string(ini, "config", "steam_path", NULL)
+            );
+        } else {
+            fprintf(stderr,
+                "config.ini file must only have one group called \"config\"\n"
+            );
+            error = true;
+        }
+    } else {
+        error = true;
+    }
+    g_key_file_free(ini);
+    return error;
+}
+
+bool load_entries(Entries * entries, const gchar * path) {
+    bool error = false;
+    if (debug) printf("Loading Entries from %s\n", path);
+    GKeyFile * ini = g_key_file_new();
+    if (g_key_file_load_from_file(
+        ini, path, G_KEY_FILE_NONE, NULL
+    )) {
+        gsize num_groups;
+        gchar ** groups = g_key_file_get_groups(ini, &num_groups);
+        if (!num_groups || strcmp("meta", groups[0])) {
+            error = true;
+        }
+        next_id = g_key_file_get_integer(ini, groups[0], "next_id", NULL);
+        for (gsize i = 1; i < num_groups; i++) {
             Entry * entry = Entry_new();
             entry->name = g_key_file_get_string(ini, groups[i], "name", NULL);
             gchar * image_file = g_build_filename(
@@ -49,17 +55,23 @@ bool load_entries(Entries * entries, const gchar * path) {
                 g_key_file_get_string(ini, groups[i], "image", NULL),
             NULL);
             entry->image = gtk_image_new_from_file(image_file);
+            if (debug) {
+                printf("  Entry: %s\n    \"%s\"\n",
+                    groups[i], entry->name
+                );
+            }
             g_free(image_file);
             Entries_insert(entries, entry);
         }
-        return false;
     } else {
-        return true;
+        error = true;
     }
+    g_key_file_free(ini);
+    return error;
 }
 
 void entry_click(GtkWidget * widget, GdkEvent * event, gpointer data) {
-    printf("Run: %s\n", ((Entry *) data)->name);
+    if (debug) printf("Run: %s\n", ((Entry *) data)->name);
 }
 
 static void activate(GtkApplication * app, gpointer user_data) {
@@ -75,8 +87,16 @@ static void activate(GtkApplication * app, gpointer user_data) {
         config_dir,
         "banners",
     NULL);
+    config_file = g_build_filename(
+        config_dir,
+        "config.ini",
+    NULL);
     all_entries = Entries_new();
+    visable_entries = Entries_new();
     load_entries(all_entries, entries_file);
+    load_config(config_file);
+    steam_entries = Entries_new();
+    load_steam_entries(steam_path, steam_entries);
 
     GtkWidget * window;
     GtkWidget * layout;
@@ -86,7 +106,7 @@ static void activate(GtkApplication * app, gpointer user_data) {
 
     window = gtk_application_window_new(app);
     gtk_window_set_resizable(GTK_WINDOW(window), false);
-    gtk_window_set_title(GTK_WINDOW(window), "Window");
+    gtk_window_set_title(GTK_WINDOW(window), APP_NAME);
     gtk_window_set_default_size(GTK_WINDOW(window), BANNER_WIDTH * GRID_WIDTH, BANNER_HIGHT * 4);
     layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_add(GTK_CONTAINER(window), layout);
@@ -125,6 +145,8 @@ static void activate(GtkApplication * app, gpointer user_data) {
 }
 
 int main(int argc, char * argv[]) {
+    debug = true;
+
     GtkApplication * app;
     int status;
 
@@ -133,8 +155,11 @@ int main(int argc, char * argv[]) {
     status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
 
+    Entries_delete(visable_entries);
     Entries_delete_all(all_entries);
+    Entries_delete_all(steam_entries);
     g_free(config_dir);
+    g_free(config_file);
     g_free(entries_file);
     g_free(banners_dir);
 

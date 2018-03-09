@@ -1,8 +1,10 @@
-#include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 
 #include <glib.h>
 
+#include "launcher.h"
 #include "steam.h"
 
 bool starts_with(char * string, char * prefix) {
@@ -21,30 +23,55 @@ bool starts_with(char * string, char * prefix) {
     }
 }
 
-void steam() {
-    GString * name_string = g_string_new("name");
-    GString * appid_string = g_string_new("appid");
+void load_steam_entries(char * steam_path, Entries * steam_entries) {
 
-    const char * steamapps_str = "/home/fred/.steam/steam/steamapps";
+    // Strings to Find
+    GString * name_key = g_string_new("name");
+    GString * appid_key = g_string_new("appid");
+
+    // Get steamapps
+    gchar * _steam_path;
+    if (steam_path) {
+        _steam_path = steam_path;
+    } else {
+        _steam_path = g_build_filename(
+            g_get_home_dir(),
+            ".steam/steam",
+            NULL
+        );
+    }
+    gchar * steamapps_str = g_build_filename(
+        _steam_path,
+        "steamapps",
+        NULL
+    );
+    if (debug) printf("Loading Steam Games from %s:\n", _steam_path);
+    if (!steam_path) g_free(_steam_path);
     GDir * steamapps = g_dir_open(steamapps_str, 0, NULL);
-    gchar * dir_entry;
 
+    // Go through every entry in the steamapps directory
+    gchar * dir_entry;
     while ((dir_entry = (gchar *) g_dir_read_name(steamapps))) {
-        const char * full_path = g_build_filename(
+        char * full_path = g_build_filename(
             steamapps_str,
             dir_entry,
             NULL
         );
         if (!starts_with(dir_entry, "appmanifest_")) continue;
+
         /*
-         * Scans the file for quoted strings.
+         * Scans the vdf appmanifest file for quoted strings.
          * When a quoted string matched the app name and id keys,
          * skip to the next quotation mark and copy the chars into the
          * corresponding string. When both strings are captured, exit the loop.
          */
         FILE * file = fopen(full_path, "r");
         if (file == NULL) {
-            fprintf(stderr, "Couldn't open app manifest %s\n", dir_entry);
+            fprintf(stderr,
+                "Couldn't open app manifest %s: %s\n",
+                dir_entry,
+                strerror(errno)
+            );
             continue;
         }
 
@@ -74,9 +101,9 @@ void steam() {
                 continue;
             case WORD:
                 if (c == '"') {
-                    if (!got_name && g_string_equal(word, name_string)) {
+                    if (!got_name && g_string_equal(word, name_key)) {
                         state = IGNORE_TO_NAME;
-                    } else if (!got_id && g_string_equal(word, appid_string)) {
+                    } else if (!got_id && g_string_equal(word, appid_key)) {
                         state = IGNORE_TO_ID;
                     } else {
                         state = IGNORE;
@@ -110,11 +137,26 @@ void steam() {
                 continue;
             }
         }
-        g_string_free(word, TRUE);
-        printf("%s: %s\n", id->str, name->str);
+
+        // Create Entry
+        if (debug) printf("  %s: %s\n", id->str, name->str);
+        Entry * entry = Entry_new();
+        entry->name = name->str;
+        entry->steam_id = id->str;
+        Entries_insert(steam_entries, entry);
+
+        // Clean up on Entry
         g_string_free(id, TRUE);
         g_string_free(name, TRUE);
-
+        g_string_free(word, TRUE);
+        g_free(full_path);
         fclose(file);
     }
+
+    // Clean up
+    g_string_free(name_key, TRUE);
+    g_string_free(appid_key, TRUE);
+    g_dir_close(steamapps);
+    g_free(steamapps_str);
 }
+
