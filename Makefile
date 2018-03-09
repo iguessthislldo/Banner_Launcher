@@ -2,7 +2,7 @@ EXEC=banner_launcher
 
 all: $(EXEC)
 
-$(EXEC): launcher.c Entry.c steam.c
+$(EXEC): launcher.c Entry.c steam.c util.c
 	gcc -g `pkg-config --cflags gtk+-3.0` -o $@ $^ `pkg-config --libs gtk+-3.0`
 
 clean:

@@ -15,6 +15,7 @@ struct Entry_struct {
     char * cd;
     char * steam_id;
     GtkWidget * image;
+    GtkWidget * event_box;
 };
 
 Entry * Entry_new();
@@ -37,5 +38,8 @@ Entries * Entries_new();
 void Entries_insert(Entries * entries, Entry * entry);
 void Entries_delete(Entries * entries);
 void Entries_delete_all(Entries * entries);
+
+Entries * Entries_filter(Entries * entries, const char * filter);
+Entries * Entries_clear_container(GtkContainer * container, Entries * entries);
 
 #endif

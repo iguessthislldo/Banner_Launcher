@@ -4,24 +4,9 @@
 
 #include <glib.h>
 
-#include "launcher.h"
+#include "util.h"
 #include "steam.h"
-
-bool starts_with(char * string, char * prefix) {
-    size_t i = 0;
-    char string_char, prefix_char;
-    while (true) {
-        string_char = string[i];
-        prefix_char = prefix[i];
-        if (!prefix_char) {
-            return true;
-        }
-        if (string_char !=  prefix_char) {
-            return false;
-        }
-        i++;
-    }
-}
+#include "launcher.h"
 
 void load_steam_entries(char * steam_path, Entries * steam_entries) {
 
