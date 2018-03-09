@@ -1,9 +1,9 @@
 # Banner Launcher
 
-Banner Launcher is an games launcher written with GTK+3 which uses Steam
+Banner Launcher is a (WIP) games launcher written with GTK+3 which uses Steam
 banner/header images. They are 460x215 sized images which are used in the
 grid view of the Steam Client. Banner Launcher can be used to launch any
-application.
+application but can automatically use Steam games.
 
 ## Old QT5 Demo
 ![Example of Usage](example.gif)
@@ -23,12 +23,16 @@ application.
   - Enter Runs Game
   - Scrolling scrolls the entries
   - Escape Closes Launcher
+- First Run Window:
+  - Where is steam (if not found)?
+  - Do you want the app to add new steam games automatically?
 
 ### Functionality
 
-- Filtering
 - Config file
+- Sort games by count then lex
 - Launch Game Functionality
     - cd
     - Steam launch by id
-- Optionally Update Steam every run?
+- Update Steam games every run
+- Favorites?
