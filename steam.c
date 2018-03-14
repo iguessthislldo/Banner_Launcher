@@ -128,7 +128,7 @@ void load_steam_entries(char * steam_path, Entries * steam_entries) {
         Entry * entry = Entry_new();
         entry->name = name->str;
         entry->steam_id = id->str;
-        Entries_insert(steam_entries, entry);
+        Entries_append(steam_entries, entry);
 
         // Clean up on Entry
         g_string_free(id, TRUE);

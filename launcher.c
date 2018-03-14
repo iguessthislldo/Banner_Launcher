@@ -29,7 +29,7 @@ bool load_config(const gchar * path) {
             );
         } else {
             fprintf(stderr,
-                "config.ini file must only have one group called \"config\"\n"
+                "The config.ini file must only have one group: [config]\n"
             );
             error = true;
         }
@@ -55,7 +55,8 @@ bool load_entries(Entries * entries, const gchar * path) {
         next_id = g_key_file_get_integer(ini, groups[0], "next_id", NULL);
         for (gsize i = 1; i < num_groups; i++) {
             Entry * entry = Entry_new();
-            entry->name = g_key_file_get_string(ini, groups[i], "name", NULL);
+            Entry_set_name(entry, g_key_file_get_string(ini, groups[i], "name", NULL));
+            entry->count = g_key_file_get_integer(ini, groups[i], "count", NULL);
             gchar * image_file = g_build_filename(
                 banners_dir,
                 g_key_file_get_string(ini, groups[i], "image", NULL),
@@ -68,7 +69,7 @@ bool load_entries(Entries * entries, const gchar * path) {
                 );
             }
             g_free(image_file);
-            Entries_insert(entries, entry);
+            Entries_append(entries, entry);
         }
     } else {
         error = true;
@@ -131,6 +132,7 @@ static void activate(GtkApplication * app, gpointer user_data) {
     all_entries = Entries_new();
     visable_entries = NULL;
     load_entries(all_entries, entries_file);
+    Entries_sort(all_entries);
     load_config(config_file);
     steam_entries = Entries_new();
     load_steam_entries(steam_path, steam_entries);
