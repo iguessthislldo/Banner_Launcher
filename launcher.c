@@ -7,6 +7,7 @@
 
 #include "launcher.h"
 #include "steam.h"
+#include "util.h"
 
 GtkWidget * window;
 GtkWidget * layout;
@@ -25,7 +26,10 @@ bool load_config(const gchar * path) {
         gchar ** groups = g_key_file_get_groups(ini, &num_groups);
         if (num_groups == 1 && !strcmp(groups[0], "config")) {
             printf("  steam_path: %s\n",
-                g_key_file_get_string(ini, "config", "steam_path", NULL)
+                steam_path = g_key_file_get_string(ini, "config", "steam_path", NULL)
+            );
+            printf("  include_steam_entries: %d\n",
+                include_steam_entries = g_key_file_get_boolean(ini, "config", "include_steam_entries", NULL)
             );
         } else {
             fprintf(stderr,
@@ -64,7 +68,7 @@ bool load_entries(Entries * entries, const gchar * path) {
             entry->image = gtk_image_new_from_file(image_file);
             g_object_ref(entry->image);
             if (debug) {
-                printf("  Entry: %s\n    \"%s\"\n",
+                printf("  %s: \"%s\"\n",
                     groups[i], entry->name
                 );
             }
@@ -94,6 +98,15 @@ void add_entries_to_grid(Entries * entries) {
             col = 0;
         }
     }
+}
+
+int update_bar(
+    void * data,
+    double dltotal, double dlnow,
+    double ultotal, double ulnow
+) {
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(data), dlnow / dltotal);
+    return 0;
 }
 
 void filter_changed(GtkEntryBuffer * b) {
@@ -190,6 +203,8 @@ static void activate(GtkApplication * app, gpointer user_data) {
 int main(int argc, char * argv[]) {
     debug = true;
     visable_entries = NULL;
+    steam_path = NULL;
+    include_steam_entries = false;
 
     GtkApplication * app;
     int status;

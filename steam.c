@@ -16,7 +16,7 @@ void load_steam_entries(char * steam_path, Entries * steam_entries) {
 
     // Get steamapps
     gchar * _steam_path;
-    if (steam_path) {
+    if (steam_path && steam_path[0]) {
         _steam_path = steam_path;
     } else {
         _steam_path = g_build_filename(

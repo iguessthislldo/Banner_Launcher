@@ -17,6 +17,7 @@ Entries * visable_entries;
 Entries * steam_entries;
 
 char * steam_path;
+bool include_steam_entries;
 
 char * config_dir;
 char * entries_file;
