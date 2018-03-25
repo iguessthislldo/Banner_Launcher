@@ -25,12 +25,16 @@ bool load_config(const gchar * path) {
         gsize num_groups;
         gchar ** groups = g_key_file_get_groups(ini, &num_groups);
         if (num_groups == 1 && !strcmp(groups[0], "config")) {
-            printf("  steam_path: %s\n",
-                steam_path = g_key_file_get_string(ini, "config", "steam_path", NULL)
+            steam_path = g_key_file_get_string(
+                ini, "config", "steam_path", NULL
             );
-            printf("  include_steam_entries: %d\n",
-                include_steam_entries = g_key_file_get_boolean(ini, "config", "include_steam_entries", NULL)
+            include_steam_entries = g_key_file_get_boolean(
+                ini, "config", "include_steam_entries", NULL
             );
+            if (debug) {
+                printf("  steam_path: %s\n", steam_path);
+                printf("  include_steam_entries: %d\n", include_steam_entries);
+            }
         } else {
             fprintf(stderr,
                 "The config.ini file must only have one group: [config]\n"
@@ -59,14 +63,37 @@ bool load_entries(Entries * entries, const gchar * path) {
         next_id = g_key_file_get_integer(ini, groups[0], "next_id", NULL);
         for (gsize i = 1; i < num_groups; i++) {
             Entry * entry = Entry_new();
-            Entry_set_name(entry, g_key_file_get_string(ini, groups[i], "name", NULL));
+
+            // id
+            entry->id = g_strdup(groups[i]);
+
+            // name
+            Entry_set_name(entry,
+                g_key_file_get_string(ini, groups[i], "name", NULL)
+            );
             entry->count = g_key_file_get_integer(ini, groups[i], "count", NULL);
+
+            // Image
             gchar * image_file = g_build_filename(
                 banners_dir,
                 g_key_file_get_string(ini, groups[i], "image", NULL),
             NULL);
             entry->image = gtk_image_new_from_file(image_file);
             g_object_ref(entry->image);
+
+            // Run
+            if (g_key_file_has_key(ini, groups[i], "exec", NULL)) {
+                entry->exec = g_key_file_get_value(ini, groups[i], "exec", NULL);
+            }
+            if (g_key_file_has_key(ini, groups[i], "cd", NULL)) {
+                entry->cd = g_key_file_get_value(ini, groups[i], "cd", NULL);
+            }
+            if (g_key_file_has_key(ini, groups[i], "steam_id", NULL)) {
+                entry->steam_id = g_key_file_get_value(
+                    ini, groups[i], "steam_id", NULL
+                );
+            }
+
             if (debug) {
                 printf("  %s: \"%s\"\n",
                     groups[i], entry->name
@@ -78,12 +105,12 @@ bool load_entries(Entries * entries, const gchar * path) {
     } else {
         error = true;
     }
-    g_key_file_free(ini);
+    //g_key_file_free(ini);
     return error;
 }
 
 void entry_click(GtkWidget * widget, GdkEvent * event, gpointer data) {
-    if (debug) printf("Run: %s\n", ((Entry *) data)->name);
+    Entry_run((Entry *) data);
 }
 
 void add_entries_to_grid(Entries * entries) {
@@ -148,7 +175,7 @@ static void activate(GtkApplication * app, gpointer user_data) {
     Entries_sort(all_entries);
     load_config(config_file);
     steam_entries = Entries_new();
-    load_steam_entries(steam_path, steam_entries);
+    load_steam_entries();
 
     window = gtk_application_window_new(app);
     gtk_window_set_resizable(GTK_WINDOW(window), false);
@@ -201,7 +228,7 @@ static void activate(GtkApplication * app, gpointer user_data) {
 }
 
 int main(int argc, char * argv[]) {
-    debug = true;
+    debug = false;
     visable_entries = NULL;
     steam_path = NULL;
     include_steam_entries = false;

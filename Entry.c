@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "launcher.h"
 #include "Entry.h"
@@ -49,22 +50,38 @@ bool Entry_is_valid(Entry * entry) {
 }
 
 void Entry_run(Entry * entry) {
+    char * exec = NULL;
+
     if (entry->exec) {
-        // TODO: pick exec(), seperate args?
-        fprintf(stderr, 
-            "Entry %u: \"%s\" could not run %s\n",
-            entry->id,
-            entry->steam_id,
-            entry->exec
-        );
+        if (entry->cd) {
+            chdir(entry->cd);
+        }
+        exec = malloc(6 + strlen(entry->exec));
+        sprintf(exec, "exec %s", entry->exec);
     } else if (entry->steam_id) {
-        // Steam run
+        exec = malloc(28 + strlen(steam_path) + strlen(entry->steam_id));
+        sprintf(exec, "exec %s/steam.sh steam://run/%s", steam_path, entry->steam_id);
     }
-    fprintf(stderr, 
-        "Entry %u: \"%s\" does not have valid exec or steam_id value!\n",
-        entry->id,
-        entry->steam_id
-    );
+
+    if (exec) {
+        if (debug) {
+            printf("Would run \"%s\": %s\n", entry->name, exec);
+        } else {
+            // execl wants a file to run AND what to set as argv[0]
+            execl("/bin/sh", "/bin/sh", "-c", exec, NULL);
+            // If we get here, execl had a problem running sh...
+            fprintf(stderr, "Could not run \"%s\": %s\n", entry->name, exec);
+        }
+    } else {
+        fprintf(stderr,
+            "\"%s\" (%s) does not have a command"
+            " or steam appid, can not run.\n",
+            entry->name,
+            entry->id
+        );
+    }
+
+    free(exec);
 }
 
 Entries * Entries_new() {

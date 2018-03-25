@@ -8,30 +8,30 @@
 #include "steam.h"
 #include "launcher.h"
 
-void load_steam_entries(char * steam_path, Entries * steam_entries) {
+void load_steam_entries() {
+
+    // Resolve steam directory
+    if (!(steam_path && steam_path[0])) {
+        if (steam_path) g_free(steam_path);
+        steam_path = g_build_filename(
+            g_get_home_dir(),
+            ".steam",
+            NULL
+        );
+    }
 
     // Strings to Find
     GString * name_key = g_string_new("name");
     GString * appid_key = g_string_new("appid");
 
     // Get steamapps
-    gchar * _steam_path;
-    if (steam_path && steam_path[0]) {
-        _steam_path = steam_path;
-    } else {
-        _steam_path = g_build_filename(
-            g_get_home_dir(),
-            ".steam/steam",
-            NULL
-        );
-    }
+    if (debug) printf("Loading Steam Games from %s:\n", steam_path);
     gchar * steamapps_str = g_build_filename(
-        _steam_path,
+        steam_path,
+        "steam",
         "steamapps",
         NULL
     );
-    if (debug) printf("Loading Steam Games from %s:\n", _steam_path);
-    if (!steam_path) g_free(_steam_path);
     GDir * steamapps = g_dir_open(steamapps_str, 0, NULL);
 
     // Go through every entry in the steamapps directory
@@ -126,8 +126,8 @@ void load_steam_entries(char * steam_path, Entries * steam_entries) {
         // Create Entry
         if (debug) printf("  %s: %s\n", id->str, name->str);
         Entry * entry = Entry_new();
-        entry->name = name->str;
-        entry->steam_id = id->str;
+        entry->name = g_strdup(name->str);
+        entry->steam_id = g_strdup(id->str);
         Entries_append(steam_entries, entry);
 
         // Clean up on Entry

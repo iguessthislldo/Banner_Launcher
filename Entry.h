@@ -14,7 +14,7 @@
 typedef struct Entry_struct Entry;
 struct Entry_struct {
     // Common
-    unsigned id;
+    char * id;
     char * name;
     char * uc_name;
     char * image_path;

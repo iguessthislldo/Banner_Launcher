@@ -3,6 +3,6 @@
 
 #include "Entry.h"
 
-void load_steam_entries(char * steam_path, Entries * steam_entries);
+void load_steam_entries();
 
 #endif
