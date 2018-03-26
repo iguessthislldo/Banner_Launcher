@@ -44,18 +44,43 @@ void init_entries_gui(Entries * entries) {
         entry->image = gtk_image_new_from_file(image_file);
         g_object_ref(entry->image);
         g_free(image_file);
+
+        GtkWidget * event_box = gtk_event_box_new();
+        entry->event_box = event_box;
+        g_object_ref(event_box);
+        gtk_widget_set_events(event_box, GDK_BUTTON_RELEASE_MASK);
+        g_signal_connect(
+            G_OBJECT(event_box),
+            "button_release_event",
+            G_CALLBACK(entry_click),
+            (gpointer) entry
+        );
+        gtk_container_add(GTK_CONTAINER(event_box), entry->image);
     }
 }
 
+static bool close_window(GtkWindow * widget, GdkEventKey *event, gpointer data) {
+    if (event->keyval == GDK_KEY_Escape) {
+        gtk_widget_destroy(GTK_WIDGET(window));
+        return true;
+    }
+    return false;
+}
+
 void init_main_window(GtkApplication * app, gpointer user_data) {
-    init_entries_gui(all_entries);
+    // Window
     window = gtk_application_window_new(app);
     gtk_window_set_resizable(GTK_WINDOW(window), false);
     gtk_window_set_title(GTK_WINDOW(window), APP_NAME);
-    gtk_window_set_default_size(GTK_WINDOW(window), BANNER_WIDTH * GRID_WIDTH, BANNER_HIGHT * 4);
+    gtk_window_set_default_size(GTK_WINDOW(window),
+        BANNER_WIDTH * GRID_WIDTH, BANNER_HIGHT * 4
+    );
+    // Close when Escape is pressed
+    g_signal_connect(window, "key_press_event", G_CALLBACK(close_window), NULL);
     layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_add(GTK_CONTAINER(window), layout);
 
+    // Filter Textbox
     GtkEntryBuffer * filter_buffer = gtk_entry_buffer_new("", -1);
     filter = gtk_entry_new_with_buffer(filter_buffer);
     g_signal_connect(
@@ -72,27 +97,15 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     );
     gtk_container_add(GTK_CONTAINER(layout), filter);
 
+    // Scrolling widget for Entries
     scroll = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll), BANNER_HIGHT * 4);
     gtk_container_add(GTK_CONTAINER(layout), scroll);
     grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(scroll), grid);
 
-    for (Node * n = all_entries->head; n; n = n->next) {
-        Entry * e = n->entry;
-        GtkWidget * event_box = gtk_event_box_new();
-        e->event_box = event_box;
-        g_object_ref(event_box);
-        gtk_widget_set_events(event_box, GDK_BUTTON_RELEASE_MASK);
-        g_signal_connect(
-            G_OBJECT(event_box),
-            "button_release_event",
-            G_CALLBACK(entry_click),
-            (gpointer) e
-        );
-        gtk_container_add(GTK_CONTAINER(event_box), e->image);
-    }
-
+    // Init Entry Elements and add them
+    init_entries_gui(all_entries);
     visable_entries = all_entries;
     add_entries_to_grid(visable_entries);
 
