@@ -100,6 +100,11 @@ void Entries_delete(Entries * entries);
 void Entries_delete_all(Entries * entries);
 
 /*
+ * Load Entries from ini file
+ */
+bool Entries_load(Entries * entries, const gchar * path);
+
+/*
  * Return new entry list with entries that start with *filter* ignoring case.
  */
 Entries * Entries_filter(Entries * entries, const char * filter);
@@ -113,5 +118,10 @@ Entries * Entries_clear_container(GtkContainer * container, Entries * entries);
  * Sort Entries in place
  */
 void Entries_sort(Entries * entries);
+
+/*
+ * Include Steam Entries
+ */
+void Entries_insert_steam();
 
 #endif

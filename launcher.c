@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -8,14 +9,54 @@
 #include "launcher.h"
 #include "steam.h"
 #include "util.h"
+#include "main_window.h"
 
-GtkWidget * window;
-GtkWidget * layout;
-GtkWidget * filter;
-GtkWidget * scroll;
-GtkWidget * grid;
+static GOptionEntry options[] = {
+    {
+        "config", 0, 0, G_OPTION_ARG_FILENAME, &config_dir,
+        "DIR is the directory where config and image files are kept,"
+            "default is $XDG_CONFIG_HOME/banner_launcher",
+        "DIR"
+    },
+    {
+        "debug", 0, 0, G_OPTION_ARG_NONE, &debug,
+        "Enable Debug Messages",
+        NULL
+    },
+    {
+        "dev", 'd', 0, G_OPTION_ARG_NONE, &dev_mode,
+        "Development mode, equivlant to \" --debug --config debug_config\"",
+        NULL
+    },
+    { NULL }
+};
 
-bool load_config(const gchar * path) {
+bool save_config(const char * path) {
+    bool had_error = false;
+    GKeyFile * ini = g_key_file_new();
+
+    g_key_file_set_string(ini, "config", "steam_path",
+        steam_path ? steam_path : ""
+    );
+
+    g_key_file_set_boolean(ini, "config", "include_steam_entries",
+        include_steam_entries
+    );
+
+    // Save config to file
+    GError * error = NULL;
+    if (!g_key_file_save_to_file(ini, path, &error)) {
+        had_error = true;
+        g_error("Could not save config to %s: \"%s\"\n",
+            path, error->message
+        );
+        g_error_free(error);
+    }
+    g_key_file_free(ini);
+    return had_error;
+}
+
+bool load_config(const char * path) {
     bool error = false;
     if (debug) printf("Loading config from %s\n", path);
     GKeyFile * ini = g_key_file_new();
@@ -48,115 +89,14 @@ bool load_config(const gchar * path) {
     return error;
 }
 
-bool load_entries(Entries * entries, const gchar * path) {
-    bool error = false;
-    if (debug) printf("Loading Entries from %s\n", path);
-    GKeyFile * ini = g_key_file_new();
-    if (g_key_file_load_from_file(
-        ini, path, G_KEY_FILE_NONE, NULL
-    )) {
-        gsize num_groups;
-        gchar ** groups = g_key_file_get_groups(ini, &num_groups);
-        if (!num_groups || strcmp("meta", groups[0])) {
-            error = true;
-        }
-        next_id = g_key_file_get_integer(ini, groups[0], "next_id", NULL);
-        for (gsize i = 1; i < num_groups; i++) {
-            Entry * entry = Entry_new();
-
-            // id
-            entry->id = g_strdup(groups[i]);
-
-            // name
-            Entry_set_name(entry,
-                g_key_file_get_string(ini, groups[i], "name", NULL)
-            );
-            entry->count = g_key_file_get_integer(ini, groups[i], "count", NULL);
-
-            // Image
-            gchar * image_file = g_build_filename(
-                banners_dir,
-                g_key_file_get_string(ini, groups[i], "image", NULL),
-            NULL);
-            entry->image = gtk_image_new_from_file(image_file);
-            g_object_ref(entry->image);
-
-            // Run
-            if (g_key_file_has_key(ini, groups[i], "exec", NULL)) {
-                entry->exec = g_key_file_get_value(ini, groups[i], "exec", NULL);
-            }
-            if (g_key_file_has_key(ini, groups[i], "cd", NULL)) {
-                entry->cd = g_key_file_get_value(ini, groups[i], "cd", NULL);
-            }
-            if (g_key_file_has_key(ini, groups[i], "steam_id", NULL)) {
-                entry->steam_id = g_key_file_get_value(
-                    ini, groups[i], "steam_id", NULL
-                );
-            }
-
-            if (debug) {
-                printf("  %s: \"%s\"\n",
-                    groups[i], entry->name
-                );
-            }
-            g_free(image_file);
-            Entries_append(entries, entry);
-        }
-    } else {
-        error = true;
+void init_data() {
+    // Paths
+    if (!config_dir) {
+        config_dir = g_build_filename(
+            g_get_user_config_dir(),
+            "banner_launcher",
+        NULL);
     }
-    //g_key_file_free(ini);
-    return error;
-}
-
-void entry_click(GtkWidget * widget, GdkEvent * event, gpointer data) {
-    Entry_run((Entry *) data);
-}
-
-void add_entries_to_grid(Entries * entries) {
-    int row = 0;
-    int col = 0;
-    int cols = GRID_WIDTH;
-    for (Node * n = entries->head; n; n = n->next) {
-        Entry * e = n->entry;
-        gtk_grid_attach(GTK_GRID(grid), e->event_box, col, row, 1, 1);
-        if (++col >= cols) {
-            row++;
-            col = 0;
-        }
-    }
-}
-
-int update_bar(
-    void * data,
-    double dltotal, double dlnow,
-    double ultotal, double ulnow
-) {
-    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(data), dlnow / dltotal);
-    return 0;
-}
-
-void filter_changed(GtkEntryBuffer * b) {
-    const char * filter = gtk_entry_buffer_get_text(b);
-    if (debug) printf("Filter: %s\n", filter);
-    Entries_clear_container(GTK_CONTAINER(grid), visable_entries);
-    if (visable_entries != all_entries) {
-        Entries_delete(visable_entries);
-    }
-    if (filter[0]) {
-        visable_entries = Entries_filter(all_entries, filter);
-    } else {
-        if (debug) printf("  <RESET>\n");
-        visable_entries = all_entries;
-    }
-    add_entries_to_grid(visable_entries);
-}
-
-static void activate(GtkApplication * app, gpointer user_data) {
-    config_dir = g_build_filename(
-        g_get_user_config_dir(),
-        "banner_launcher",
-    NULL);
     entries_file = g_build_filename(
         config_dir,
         "entries.ini",
@@ -169,82 +109,97 @@ static void activate(GtkApplication * app, gpointer user_data) {
         config_dir,
         "config.ini",
     NULL);
+
+    // Check the paths, creating defaults if not found
+    if (!g_file_test(config_dir, G_FILE_TEST_IS_DIR)) {
+        if (g_mkdir_with_parents(config_dir, 0744)) {
+            fprintf(stderr,
+                "Could not create new config directory: \"%s\"\n",
+                strerror(errno)
+            );
+            exit(1);
+        }
+    }
+    if (!g_file_test(entries_file, G_FILE_TEST_IS_REGULAR)) {
+        GError * error = NULL;
+        const char * default_file = "[meta]\nnext_id=0\n";
+        if (!g_file_set_contents(entries_file, default_file, -1, &error)) {
+            g_error(
+                "Could not create new entries file: %s\n", error->message
+            );
+            g_error_free(error);
+        }
+    }
+    if (!g_file_test(banners_dir, G_FILE_TEST_IS_DIR)) {
+        if (g_mkdir_with_parents(banners_dir, 0744)) {
+            g_error(
+                "Could not create new banners directory %s: \"%s\"\n",
+                banners_dir,
+                strerror(errno)
+            );
+        }
+    }
+
+    // Load files
     all_entries = Entries_new();
     visable_entries = NULL;
-    load_entries(all_entries, entries_file);
+    Entries_load(all_entries, entries_file);
     Entries_sort(all_entries);
     load_config(config_file);
     steam_entries = Entries_new();
     load_steam_entries();
 
-    window = gtk_application_window_new(app);
-    gtk_window_set_resizable(GTK_WINDOW(window), false);
-    gtk_window_set_title(GTK_WINDOW(window), APP_NAME);
-    gtk_window_set_default_size(GTK_WINDOW(window), BANNER_WIDTH * GRID_WIDTH, BANNER_HIGHT * 4);
-    layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_container_add(GTK_CONTAINER(window), layout);
-
-    GtkEntryBuffer * filter_buffer = gtk_entry_buffer_new("", -1);
-    filter = gtk_entry_new_with_buffer(filter_buffer);
-    g_signal_connect(
-        G_OBJECT(filter_buffer),
-        "inserted-text",
-        G_CALLBACK(filter_changed),
-        NULL
-    );
-    g_signal_connect(
-        G_OBJECT(filter_buffer),
-        "deleted-text",
-        G_CALLBACK(filter_changed),
-        NULL
-    );
-    gtk_container_add(GTK_CONTAINER(layout), filter);
-
-    scroll = gtk_scrolled_window_new(NULL, NULL);
-    gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll), BANNER_HIGHT * 4);
-    gtk_container_add(GTK_CONTAINER(layout), scroll);
-    grid = gtk_grid_new();
-    gtk_container_add(GTK_CONTAINER(scroll), grid);
-
-    for (Node * n = all_entries->head; n; n = n->next) {
-        Entry * e = n->entry;
-        GtkWidget * event_box = gtk_event_box_new();
-        e->event_box = event_box;
-        g_object_ref(event_box);
-        gtk_widget_set_events(event_box, GDK_BUTTON_RELEASE_MASK);
-        g_signal_connect(
-            G_OBJECT(event_box),
-            "button_release_event",
-            G_CALLBACK(entry_click),
-            (gpointer) e
-        );
-        gtk_container_add(GTK_CONTAINER(event_box), e->image);
+    if (include_steam_entries) {
+        Entries_insert_steam();
     }
-
-    visable_entries = all_entries;
-    add_entries_to_grid(visable_entries);
-
-    gtk_widget_show_all(window);
 }
 
 int main(int argc, char * argv[]) {
     debug = false;
+    dev_mode = false;
+    config_dir = NULL;
     visable_entries = NULL;
     steam_path = NULL;
     include_steam_entries = false;
+
+    steam_header_url_head = STEAM_HEADER_URL_HEAD;
+    steam_header_url_tail = STEAM_HEADER_URL_TAIL;
+    steam_header_url_head_len = strlen(STEAM_HEADER_URL_HEAD);
+    steam_header_url_tail_len = strlen(STEAM_HEADER_URL_TAIL);
+
+    GError * error = NULL;
+    GOptionContext * option_context = g_option_context_new(
+        "Launch applications using Steam 460x215 images"
+    );
+    g_option_context_add_main_entries(option_context, options, NULL);
+    g_option_context_add_group(option_context, gtk_get_option_group(TRUE));
+    if (!g_option_context_parse(option_context, &argc, &argv, &error)) {
+        g_print("Option parsing failed: %s\n", error->message);
+        exit(1);
+    }
+
+    if (dev_mode) {
+        printf("Development Debug Mode\n");
+        config_dir = "debug_config";
+        debug = true;
+    }
+
+    init_data();
 
     GtkApplication * app;
     int status;
 
     app = gtk_application_new("us.hornsey.launcher", G_APPLICATION_FLAGS_NONE);
-    g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
+    g_signal_connect(app, "activate", G_CALLBACK(init_main_window), NULL);
     status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
+
+    save_config(config_file);
 
     if (visable_entries != all_entries) Entries_delete(visable_entries);
     Entries_delete_all(all_entries);
     Entries_delete_all(steam_entries);
-    g_free(config_dir);
+    if (!dev_mode) g_free(config_dir);
     g_free(config_file);
     g_free(entries_file);
     g_free(banners_dir);

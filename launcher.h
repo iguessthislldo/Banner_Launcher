@@ -11,12 +11,13 @@
 #define GRID_WIDTH 3
 
 bool debug;
+bool dev_mode;
 
 Entries * all_entries;
 Entries * visable_entries;
-Entries * steam_entries;
 
 char * steam_path;
+Entries * steam_entries;
 bool include_steam_entries;
 
 char * config_dir;
