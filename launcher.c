@@ -130,6 +130,9 @@ void init_data() {
             g_error_free(error);
         }
     }
+    if (!g_file_test(config_file, G_FILE_TEST_IS_REGULAR)) {
+        save_config(config_file);
+    }
     if (!g_file_test(banners_dir, G_FILE_TEST_IS_DIR)) {
         if (g_mkdir_with_parents(banners_dir, 0744)) {
             g_error(
@@ -193,8 +196,6 @@ int main(int argc, char * argv[]) {
     g_signal_connect(app, "activate", G_CALLBACK(init_main_window), NULL);
     status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
-
-    save_config(config_file);
 
     if (visable_entries != all_entries) Entries_delete(visable_entries);
     Entries_delete_all(all_entries);

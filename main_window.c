@@ -1,7 +1,20 @@
 #include "main_window.h"
 
-void entry_click(GtkWidget * widget, GdkEvent * event, gpointer data) {
-    Entry_run((Entry *) data);
+void entry_click(GtkWidget * widget, GdkEventButton * event, gpointer data) {
+    Entry * entry = (Entry *) data;
+    if (debug) printf(
+        "Mouse button %d on Entry #%s\n", event->button, entry->id
+    );
+    switch (event->button) {
+    case 1:
+        Entry_run(entry);
+        break;
+    case 3:
+        gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
+        break;
+    default:
+        break;
+    }
 }
 
 void add_entries_to_grid(Entries * entries) {
@@ -59,12 +72,42 @@ void init_entries_gui(Entries * entries) {
     }
 }
 
-static bool close_window(GtkWindow * widget, GdkEventKey *event, gpointer data) {
+void quit() {
+    gtk_widget_destroy(GTK_WIDGET(window));
+}
+
+static bool esc_close(GtkWindow * widget, GdkEventKey *event, gpointer data) {
     if (event->keyval == GDK_KEY_Escape) {
-        gtk_widget_destroy(GTK_WIDGET(window));
+        quit();
         return true;
     }
     return false;
+}
+
+void init_menu() {
+    menu = gtk_menu_new();
+
+    unsigned a = 0;
+    unsigned b = 1;
+
+    GtkWidget * edit_item = gtk_menu_item_new_with_label("Edit Game");
+    gtk_menu_attach(GTK_MENU(menu), edit_item, 0, 1, a++, b++);
+
+    GtkWidget * remove_item = gtk_menu_item_new_with_label("Remove Game");
+    gtk_menu_attach(GTK_MENU(menu), remove_item, 0, 1, a++, b++);
+
+    GtkWidget * add_item = gtk_menu_item_new_with_label("Add Game(s)");
+    gtk_menu_attach(GTK_MENU(menu), add_item, 0, 1, a++, b++);
+
+    GtkWidget * settings_item = gtk_menu_item_new_with_label("Settings");
+    gtk_menu_attach(GTK_MENU(menu), settings_item, 0, 1, a++, b++);
+
+    GtkWidget * quit_item = gtk_menu_item_new_with_label("Quit");
+    gtk_menu_attach(GTK_MENU(menu), quit_item, 0, 1, a++, b++);
+    g_signal_connect_swapped(G_OBJECT(quit_item), "activate", G_CALLBACK(quit), NULL);
+
+    gtk_menu_attach_to_widget(GTK_MENU(menu), window, NULL);
+    gtk_widget_show_all(menu);
 }
 
 void init_main_window(GtkApplication * app, gpointer user_data) {
@@ -76,9 +119,12 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
         BANNER_WIDTH * GRID_WIDTH, BANNER_HIGHT * 4
     );
     // Close when Escape is pressed
-    g_signal_connect(window, "key_press_event", G_CALLBACK(close_window), NULL);
+    g_signal_connect(window, "key_press_event", G_CALLBACK(esc_close), NULL);
     layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_add(GTK_CONTAINER(window), layout);
+
+    // Entry Context Menu
+    init_menu();
 
     // Filter Textbox
     GtkEntryBuffer * filter_buffer = gtk_entry_buffer_new("", -1);
