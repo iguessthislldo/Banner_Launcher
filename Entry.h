@@ -49,11 +49,6 @@ void Entry_delete(Entry * entry);
 void Entry_set_name(Entry * entry, const char * name);
 
 /*
- * Set the image path and load the image at the same time.
- */
-void Entry_set_image(Entry * entry, const char * path);
-
-/*
  * Valididate Entry values and can be run "afaik"
  */
 bool Entry_is_valid(Entry * entry);

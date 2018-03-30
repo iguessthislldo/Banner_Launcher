@@ -30,12 +30,6 @@ void Entry_set_name(Entry * entry, const char * name) {
     entry->uc_name = g_utf8_strup(name, -1);
 }
 
-void Entry_set_image(Entry * entry, const char * path) {
-    if (entry->image_path) g_free(entry->image_path);
-    entry->image_path = g_strdup(path);
-    // TODO Set error icon if image is invalid
-}
-
 bool Entry_is_valid(Entry * entry) {
     if (!entry->id) {
         return false;
@@ -302,10 +296,30 @@ void Entries_insert_steam() {
 
             // Download
             printf("%s -> %s\n", steam_header_url, header_path);
-            download(NULL, update_bar, steam_header_url, header_path);
+            download(steam_header_url, update_bar, steam_header_url, header_path);
             free(steam_header_url);
             g_free(header_path);
         }
     }
 }
 
+bool Entries_save(Entries * entries, const char * path) {
+    bool had_error = false;
+    GKeyFile * ini = g_key_file_new();
+
+    for (Node * node = entries->head; node; node = node->next) {
+        /* g_ket_file_set_string(ini, */ 
+    }
+
+    // Save entries to file
+    GError * error = NULL;
+    if (!g_key_file_save_to_file(ini, path, &error)) {
+        had_error = true;
+        g_error("Could not save entries to %s: \"%s\"\n",
+            path, error->message
+        );
+        g_error_free(error);
+    }
+    g_key_file_free(ini);
+    return had_error;
+}

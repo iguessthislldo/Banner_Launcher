@@ -1,5 +1,12 @@
 #include "main_window.h"
 
+GtkWidget * window;
+GtkWidget * layout;
+GtkWidget * filter;
+GtkWidget * scroll;
+GtkWidget * grid;
+GtkWidget * menu;
+
 void entry_click(GtkWidget * widget, GdkEventButton * event, gpointer data) {
     Entry * entry = (Entry *) data;
     if (debug) printf(
@@ -50,17 +57,12 @@ void filter_changed(GtkEntryBuffer * b) {
 void init_entries_gui(Entries * entries) {
     for (Node * node = entries->head; node; node = node->next) {
         Entry * entry = node->entry;
-        gchar * image_file = g_build_filename(
-            banners_dir,
-            entry->image_path,
-        NULL);
-        entry->image = gtk_image_new_from_file(image_file);
-        g_object_ref(entry->image);
-        g_free(image_file);
 
+        // Event Box
         GtkWidget * event_box = gtk_event_box_new();
         entry->event_box = event_box;
         g_object_ref(event_box);
+        gtk_widget_set_size_request(event_box, BANNER_WIDTH, BANNER_HIGHT);
         gtk_widget_set_events(event_box, GDK_BUTTON_RELEASE_MASK);
         g_signal_connect(
             G_OBJECT(event_box),
@@ -68,7 +70,43 @@ void init_entries_gui(Entries * entries) {
             G_CALLBACK(entry_click),
             (gpointer) entry
         );
-        gtk_container_add(GTK_CONTAINER(event_box), entry->image);
+
+        // Image
+        gchar * full_image_path = g_build_filename(
+            banners_dir,
+            entry->image_path,
+        NULL);
+        GError * error = NULL;
+        GdkPixbuf * image = gdk_pixbuf_new_from_file_at_scale(
+            full_image_path, BANNER_WIDTH, BANNER_HIGHT,
+            false, // Do not perserve aspect ratio
+            &error
+        );
+        g_free(full_image_path);
+        if (image) { // Create Normal GUI
+            entry->image = gtk_image_new_from_pixbuf(image);
+            g_object_unref(image); // Image is copied and no longer needed
+            g_object_ref(entry->image);
+            gtk_container_add(GTK_CONTAINER(event_box), entry->image);
+
+        } else { // Create Error Entry GUI
+            g_warning("Could load image %s: \"%s\"\n",
+                full_image_path, error->message
+            );
+            g_error_free(error);
+
+            GtkWidget * error_message = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+            gtk_container_add(GTK_CONTAINER(error_message),
+                gtk_image_new_from_icon_name(
+                    "image-missing", GTK_ICON_SIZE_DIALOG
+                )
+            );
+            gtk_container_add(GTK_CONTAINER(error_message),
+                gtk_label_new(entry->name)
+            );
+            gtk_container_add(GTK_CONTAINER(event_box), error_message);
+        }
+
     }
 }
 
@@ -118,13 +156,13 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     gtk_window_set_default_size(GTK_WINDOW(window),
         BANNER_WIDTH * GRID_WIDTH, BANNER_HIGHT * 4
     );
+
     // Close when Escape is pressed
     g_signal_connect(window, "key_press_event", G_CALLBACK(esc_close), NULL);
+
+    // Vertical Layout
     layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_container_add(GTK_CONTAINER(window), layout);
-
-    // Entry Context Menu
-    init_menu();
 
     // Filter Textbox
     GtkEntryBuffer * filter_buffer = gtk_entry_buffer_new("", -1);
@@ -155,6 +193,10 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     visable_entries = all_entries;
     add_entries_to_grid(visable_entries);
 
+    // Entry Context Menu
+    init_menu();
+
+    // Show Window
     gtk_widget_show_all(window);
 }
 
