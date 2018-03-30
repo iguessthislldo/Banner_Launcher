@@ -12,7 +12,6 @@ application but can automatically use Steam games.
 
 ### UI
 
-- Context Menus for Entries
 - Steam Import Window
 - Add/Edit Entry Window
 - Settings Window
@@ -29,10 +28,14 @@ application but can automatically use Steam games.
 
 ### Functionality
 
+- Favorites?
+
+### Done
+
+- Context Menus for Entries
 - Config file
 - Sort games by count then lex
 - Launch Game Functionality
     - cd
     - Steam launch by id
 - Update Steam games every run
-- Favorites?
