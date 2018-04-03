@@ -215,7 +215,7 @@ bool Entry_compare(Entry * a, Entry * b) {
             else if (!a->last_ran && b->last_ran)
                 return false;
             else if (a->last_ran && b->last_ran)
-                compare_time_strings(a->last_ran, b->last_ran);
+                return compare_time_strings(a->last_ran, b->last_ran);
             break;
         case MOST_RAN:
             if (more_ran)

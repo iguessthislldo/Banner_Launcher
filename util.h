@@ -33,5 +33,5 @@ char * get_time_string();
  * Compare 2 time strings, returns true if "a" is more recent than "b"
  */
 //bool compare_time_strings(const char * a, const char * b)
-#define compare_time_strings(a, b) (strcmp((a), (b)) < 0)
+#define compare_time_strings(a, b) (strcmp((a), (b)) > 0)
 

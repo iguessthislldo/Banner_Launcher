@@ -43,7 +43,7 @@ void add_entries_to_grid(Entries * entries) {
     }
 }
 
-void update_displayed_entries() {
+void update_visable_entries() {
     Entries_clear_container(GTK_CONTAINER(grid), visable_entries);
     if (visable_entries != all_entries) {
         Entries_delete(visable_entries);
@@ -60,7 +60,7 @@ void filter_changed(GtkEntryBuffer * b) {
     if (filter_string) free(filter_string);
     filter_string = strdup(gtk_entry_buffer_get_text(b));
     if (debug) printf("Filter: %s\n", filter_string);
-    update_displayed_entries();
+    update_visable_entries();
 }
 
 void init_entries_gui(Entries * entries) {
@@ -132,10 +132,20 @@ void quit() {
     gtk_widget_destroy(GTK_WIDGET(window));
 }
 
-static bool esc_close(GtkWindow * widget, GdkEventKey *event, gpointer data) {
-    if (event->keyval == GDK_KEY_Escape) {
+static bool kb_shortcuts(GtkWindow * widget, GdkEventKey *event, gpointer data) {
+    switch (event->keyval) {
+
+    // Close when Escape is pressed
+    case GDK_KEY_Escape:
         quit();
         return true;
+
+    // When Enter is pressed, run the first rntry in visable_entries
+    case GDK_KEY_Return:
+        if (visable_entries->size)
+            Entry_run(visable_entries->head->entry);
+        return true;
+
     }
     return false;
 }
@@ -143,7 +153,7 @@ static bool esc_close(GtkWindow * widget, GdkEventKey *event, gpointer data) {
 void set_sort_by(void * value) {
     sort_by = (Sort_By) value;
     Entries_sort(all_entries);
-    update_displayed_entries();
+    update_visable_entries();
 }
 
 void init_menu() {
@@ -201,8 +211,8 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
         BANNER_WIDTH * GRID_WIDTH, BANNER_HIGHT * 4
     );
 
-    // Close when Escape is pressed
-    g_signal_connect(window, "key_press_event", G_CALLBACK(esc_close), NULL);
+    // Handle Keyboard Shortcuts
+    g_signal_connect(window, "key_press_event", G_CALLBACK(kb_shortcuts), NULL);
 
     // Vertical Layout
     layout = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -235,7 +245,7 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     // Init Entry Elements and add them
     init_entries_gui(all_entries);
     visable_entries = all_entries;
-    update_displayed_entries();
+    update_visable_entries();
 
     // Entry Context Menu
     init_menu();
