@@ -1,7 +1,10 @@
 #include <string.h>
 #include <errno.h>
+#include <time.h>
+#include <stdlib.h>
 
 #include <curl/curl.h>
+#include <glib.h>
 
 #include "util.h"
 
@@ -65,5 +68,16 @@ bool starts_with(const char * string, const char * prefix) {
         }
         i++;
     }
+}
+
+#define TIME_STRING_LEN 15
+// 4 + 2+2+2+2+2+  1 = 15
+// YYYYMMDDhhmmss /0
+char * get_time_string() {
+    char * string = g_malloc(TIME_STRING_LEN);
+    time_t epoch = time(NULL);
+    struct tm utc = *gmtime(&epoch);
+    strftime(string, TIME_STRING_LEN, "%Y%m%d%H%M%S", &utc);
+    return string;
 }
 

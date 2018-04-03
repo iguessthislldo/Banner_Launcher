@@ -20,6 +20,7 @@ void Entry_delete(Entry * entry) {
     if (entry->event_box) g_object_unref(entry->event_box);
     if (entry->exec) g_free(entry->exec);
     if (entry->cd) g_free(entry->cd);
+    if (entry->last_ran) free(entry->last_ran);
     free(entry);
 }
 
@@ -63,6 +64,12 @@ void Entry_run(Entry * entry) {
         if (debug) {
             printf("Would run \"%s\": %s\n", entry->name, exec);
         } else {
+            // Update Entry
+            entry->count++;
+            if (entry->last_ran) g_free(entry->last_ran);
+            entry->last_ran = get_time_string();
+            Entries_save(entries_file);
+
             // execl wants a file to run AND what to set as argv[0]
             execl("/bin/sh", "/bin/sh", "-c", exec, NULL);
             // If we get here, execl had a problem running sh...
@@ -143,20 +150,27 @@ bool Entries_load(Entries * entries, const gchar * path) {
             Entry_set_name(entry,
                 g_key_file_get_string(ini, groups[i], "name", NULL)
             );
+
+            // count
             entry->count = g_key_file_get_integer(ini, groups[i], "count", NULL);
 
             // image_path
             entry->image_path = g_key_file_get_string(ini, groups[i], "image", NULL);
 
+            // last_ran
+            if (g_key_file_has_key(ini, groups[i], "last_ran", NULL)) {
+                entry->last_ran = g_key_file_get_string(ini, groups[i], "last_ran", NULL);
+            }
+
             // Run Information
             if (g_key_file_has_key(ini, groups[i], "exec", NULL)) {
-                entry->exec = g_key_file_get_value(ini, groups[i], "exec", NULL);
+                entry->exec = g_key_file_get_string(ini, groups[i], "exec", NULL);
             }
             if (g_key_file_has_key(ini, groups[i], "cd", NULL)) {
-                entry->cd = g_key_file_get_value(ini, groups[i], "cd", NULL);
+                entry->cd = g_key_file_get_string(ini, groups[i], "cd", NULL);
             }
             if (g_key_file_has_key(ini, groups[i], "steam_id", NULL)) {
-                entry->steam_id = g_key_file_get_value(
+                entry->steam_id = g_key_file_get_string(
                     ini, groups[i], "steam_id", NULL
                 );
             }
@@ -188,13 +202,34 @@ Entries * Entries_filter(Entries * entries, const char * filter) {
     return filtered;
 }
 
+/*
+ * Return true if "a" goes first, else returns false.
+ */
 bool Entry_compare(Entry * a, Entry * b) {
-    // a is true, b is false
-    if (a->count > b->count) {
-        return true;
-    } else if (a->count < b->count) {
-        return false;
-    }
+    bool more_ran = a->count > b->count;
+    bool less_ran = a->count < b->count;
+    switch (sort_by) {
+        case LAST_RAN:
+            if (a->last_ran && !b->last_ran)
+                return true;
+            else if (!a->last_ran && b->last_ran)
+                return false;
+            else if (a->last_ran && b->last_ran)
+                compare_time_strings(a->last_ran, b->last_ran);
+            break;
+        case MOST_RAN:
+            if (more_ran)
+                return true;
+            else if (less_ran)
+                return false;
+            break;
+        case LEAST_RAN:
+            if (more_ran)
+                return false;
+            else if (less_ran)
+                return true;
+            break;
+    };
     return g_utf8_collate(a->uc_name, b->uc_name) < 0;
 }
 
@@ -296,19 +331,33 @@ void Entries_insert_steam() {
 
             // Download
             printf("%s -> %s\n", steam_header_url, header_path);
-            download(steam_header_url, update_bar, steam_header_url, header_path);
+            download(NULL, update_bar, steam_header_url, header_path);
             free(steam_header_url);
             g_free(header_path);
         }
     }
 }
 
-bool Entries_save(Entries * entries, const char * path) {
+bool Entries_save(const char * path) {
     bool had_error = false;
     GKeyFile * ini = g_key_file_new();
 
-    for (Node * node = entries->head; node; node = node->next) {
-        /* g_ket_file_set_string(ini, */ 
+    g_key_file_set_integer(ini, "meta", "next_id", next_id);
+
+    for (Node * node = all_entries->head; node; node = node->next) {
+        Entry * e = node->entry;
+        g_key_file_set_string(ini, e->id, "name", e->name);
+        g_key_file_set_string(ini, e->id, "image", e->image_path);
+        g_key_file_set_integer(ini, e->id, "count", e->count);
+        g_key_file_set_boolean(ini, e->id, "favorite", e->favorite);
+        if (e->last_ran)
+            g_key_file_set_string(ini, e->id, "last_ran", e->last_ran);
+        if (e->exec)
+            g_key_file_set_string(ini, e->id, "exec", e->exec);
+        if (e->cd)
+            g_key_file_set_string(ini, e->id, "cd", e->cd);
+        if (e->steam_id)
+            g_key_file_set_string(ini, e->id, "steam_id", e->steam_id);
     }
 
     // Save entries to file

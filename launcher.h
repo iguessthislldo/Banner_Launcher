@@ -10,6 +10,18 @@
 #define BANNER_HIGHT 215
 #define GRID_WIDTH 3
 
+// Sorting State
+// How to sort displayed entries
+enum _Sort_By {
+    LAST_RAN,
+    MOST_RAN,
+    LEAST_RAN
+};
+typedef enum _Sort_By Sort_By;
+Sort_By sort_by;
+
+bool entries_changed;
+
 bool debug;
 bool dev_mode;
 

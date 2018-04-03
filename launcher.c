@@ -164,6 +164,8 @@ int main(int argc, char * argv[]) {
     visable_entries = NULL;
     steam_path = NULL;
     include_steam_entries = false;
+    entries_changed = false;
+    sort_by = LAST_RAN;
 
     steam_header_url_head = STEAM_HEADER_URL_HEAD;
     steam_header_url_tail = STEAM_HEADER_URL_TAIL;

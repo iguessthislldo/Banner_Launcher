@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "main_window.h"
 
 GtkWidget * window;
@@ -6,6 +9,8 @@ GtkWidget * filter;
 GtkWidget * scroll;
 GtkWidget * grid;
 GtkWidget * menu;
+
+char * filter_string;
 
 void entry_click(GtkWidget * widget, GdkEventButton * event, gpointer data) {
     Entry * entry = (Entry *) data;
@@ -38,20 +43,24 @@ void add_entries_to_grid(Entries * entries) {
     }
 }
 
-void filter_changed(GtkEntryBuffer * b) {
-    const char * filter = gtk_entry_buffer_get_text(b);
-    if (debug) printf("Filter: %s\n", filter);
+void update_displayed_entries() {
     Entries_clear_container(GTK_CONTAINER(grid), visable_entries);
     if (visable_entries != all_entries) {
         Entries_delete(visable_entries);
     }
-    if (filter[0]) {
-        visable_entries = Entries_filter(all_entries, filter);
+    if (filter_string && filter_string[0]) {
+        visable_entries = Entries_filter(all_entries, filter_string);
     } else {
-        if (debug) printf("  <RESET>\n");
         visable_entries = all_entries;
     }
     add_entries_to_grid(visable_entries);
+}
+
+void filter_changed(GtkEntryBuffer * b) {
+    if (filter_string) free(filter_string);
+    filter_string = strdup(gtk_entry_buffer_get_text(b));
+    if (debug) printf("Filter: %s\n", filter_string);
+    update_displayed_entries();
 }
 
 void init_entries_gui(Entries * entries) {
@@ -90,21 +99,30 @@ void init_entries_gui(Entries * entries) {
             gtk_container_add(GTK_CONTAINER(event_box), entry->image);
 
         } else { // Create Error Entry GUI
-            g_warning("Could load image %s: \"%s\"\n",
-                full_image_path, error->message
+            char * error_message = g_strdup_printf(
+                "Could load image %s: \"%s\"\n",
+                full_image_path,
+                error->message
             );
             g_error_free(error);
 
-            GtkWidget * error_message = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-            gtk_container_add(GTK_CONTAINER(error_message),
+            if (debug) fprintf(stderr, error_message);
+
+            GtkWidget * error_message_box = gtk_box_new(
+                GTK_ORIENTATION_VERTICAL, 0);
+            gtk_container_add(GTK_CONTAINER(error_message_box),
+                gtk_label_new(entry->name)
+            );
+            gtk_container_add(GTK_CONTAINER(error_message_box),
                 gtk_image_new_from_icon_name(
                     "image-missing", GTK_ICON_SIZE_DIALOG
                 )
             );
-            gtk_container_add(GTK_CONTAINER(error_message),
-                gtk_label_new(entry->name)
+            gtk_container_add(GTK_CONTAINER(error_message_box),
+                gtk_label_new(error_message)
             );
-            gtk_container_add(GTK_CONTAINER(event_box), error_message);
+            gtk_container_add(GTK_CONTAINER(event_box), error_message_box);
+            g_free(error_message);
         }
 
     }
@@ -122,6 +140,12 @@ static bool esc_close(GtkWindow * widget, GdkEventKey *event, gpointer data) {
     return false;
 }
 
+void set_sort_by(void * value) {
+    sort_by = (Sort_By) value;
+    Entries_sort(all_entries);
+    update_displayed_entries();
+}
+
 void init_menu() {
     menu = gtk_menu_new();
 
@@ -137,6 +161,24 @@ void init_menu() {
     GtkWidget * add_item = gtk_menu_item_new_with_label("Add Game(s)");
     gtk_menu_attach(GTK_MENU(menu), add_item, 0, 1, a++, b++);
 
+    // Sort Entries
+    GtkWidget * sort_by_item = gtk_menu_item_new_with_label("Sort By");
+    GtkWidget * sort_by_menu = gtk_menu_new();
+    char * names[3] = {"Last Ran", "Most Ran", "Least Ran"};
+    GSList * group = NULL;
+    for (unsigned i = 0; i < 3; i++) {
+        GtkWidget * item = gtk_radio_menu_item_new_with_label(group, names[i]);
+        if (!i) gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), true);
+        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(item));
+        gtk_menu_attach(GTK_MENU(sort_by_menu), item, 0, 1, i, i+1);
+        g_signal_connect_swapped(
+            G_OBJECT(item), "activate",
+            G_CALLBACK(set_sort_by), (void *) (long unsigned) i
+        );
+    }
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(sort_by_item), sort_by_menu);
+    gtk_menu_attach(GTK_MENU(menu), sort_by_item, 0, 1, a++, b++);
+
     GtkWidget * settings_item = gtk_menu_item_new_with_label("Settings");
     gtk_menu_attach(GTK_MENU(menu), settings_item, 0, 1, a++, b++);
 
@@ -149,6 +191,8 @@ void init_menu() {
 }
 
 void init_main_window(GtkApplication * app, gpointer user_data) {
+    filter = NULL;
+
     // Window
     window = gtk_application_window_new(app);
     gtk_window_set_resizable(GTK_WINDOW(window), false);
@@ -191,7 +235,7 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     // Init Entry Elements and add them
     init_entries_gui(all_entries);
     visable_entries = all_entries;
-    add_entries_to_grid(visable_entries);
+    update_displayed_entries();
 
     // Entry Context Menu
     init_menu();

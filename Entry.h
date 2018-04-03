@@ -2,6 +2,7 @@
 #define ENTRY_HEADER
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <gtk/gtk.h>
 
@@ -18,8 +19,11 @@ struct Entry_struct {
     char * name;
     char * uc_name;
     char * image_path;
-    unsigned count;
+
+    // Sort
+    unsigned count; // Number of times this Entry has been run
     bool favorite;
+    char * last_ran; // As YYYYMMDDhhmmss
 
     // Run through exec
     char * exec;
@@ -118,5 +122,10 @@ void Entries_sort(Entries * entries);
  * Include Steam Entries
  */
 void Entries_insert_steam();
+
+/*
+ * Save Entries to "path"
+ */
+bool Entries_save(const char * path);
 
 #endif
