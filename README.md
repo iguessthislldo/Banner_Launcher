@@ -32,6 +32,7 @@ application but can automatically use Steam games.
 
 ### Done
 
+- "Sort By" Menu with "Last Ran", "Most Ran", "Least Ran"
 - Context Menus for Entries
 - Config file
 - Sort games by count then lex
