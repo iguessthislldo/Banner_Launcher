@@ -10,8 +10,6 @@ application but can automatically use Steam games.
 
 ## TODO
 
-### UI
-
 - Steam Import Window
 - Add/Edit Entry Window
 - Settings Window
@@ -25,13 +23,11 @@ application but can automatically use Steam games.
 - First Run Window:
   - Where is steam (if not found)?
   - Do you want the app to add new steam games automatically?
-
-### Functionality
-
-- Favorites?
+- Entries Error Widgets should be 460x215
 
 ### Done
 
+- Download Progress Menu
 - "Sort By" Menu with "Last Ran", "Most Ran", "Least Ran"
 - Context Menus for Entries
 - Config file
