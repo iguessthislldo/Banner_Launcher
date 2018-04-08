@@ -15,3 +15,6 @@ uninstall:
 clean:
 	rm -f $(EXEC)
 	rm -fr debug_config
+
+fake: $(EXEC)
+	bash generate_fake_entries.sh

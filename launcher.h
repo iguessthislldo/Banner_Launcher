@@ -24,6 +24,7 @@ bool entries_changed;
 
 bool debug;
 bool dev_mode;
+bool genconf;
 
 Entries * all_entries;
 Entries * visable_entries;

@@ -28,6 +28,11 @@ static GOptionEntry options[] = {
         "Development mode, equivlant to \" --debug --config debug_config\"",
         NULL
     },
+    {
+        "genconf", 0, 0, G_OPTION_ARG_NONE, &genconf,
+        "Generate Config Files if missing and exit",
+        NULL
+    },
     { NULL }
 };
 
@@ -157,12 +162,22 @@ void init_data() {
     Entries_sort(all_entries);
 }
 
+void save_entries_if_changed() {
+    if (entries_changed) {
+        if (debug) printf("Entries Changed, Saving Entries\n");
+        Entries_save(entries_file);
+    } else if (debug) {
+        printf("Entries not changed, not saving\n");
+    }
+}
+
 int main(int argc, char * argv[]) {
     entries_changed = false;
 
     // Defaults
     debug = false;
     dev_mode = false;
+    genconf = false;
     config_dir = NULL;
     visable_entries = NULL;
     steam_path = NULL;
@@ -188,14 +203,26 @@ int main(int argc, char * argv[]) {
         exit(1);
     }
 
+    // Dev Mode
     if (dev_mode) {
         printf("Development Debug Mode\n");
         config_dir = "debug_config";
         debug = true;
     }
 
+    // --genconf: Generate Blank Config
+    if (genconf) {
+        include_steam_entries = false;
+    }
+
     // Load Data
     init_data();
+
+    // exit if --genconf
+    if (genconf) {
+        printf("--genconf used, Exiting after init_data()\n");
+        exit(0);
+    }
 
     // Run Gtk Application
     GtkApplication * app = gtk_application_new(
@@ -204,13 +231,6 @@ int main(int argc, char * argv[]) {
     g_signal_connect(app, "activate", G_CALLBACK(init_main_window), NULL);
     int status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
-
-    if (entries_changed) {
-        if (debug) printf("Entries Changed, Saving Entries\n");
-        Entries_save(entries_file);
-    } else if (debug) {
-        printf("Entries not changed, not saving\n");
-    }
 
     // Clean Up Data
     if (visable_entries != all_entries) Entries_delete(visable_entries);
