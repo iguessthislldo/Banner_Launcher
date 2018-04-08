@@ -147,31 +147,34 @@ void init_data() {
     all_entries = Entries_new();
     visable_entries = NULL;
     Entries_load(all_entries, entries_file);
-    Entries_sort(all_entries);
-    load_config(config_file);
     steam_entries = Entries_new();
+    load_config(config_file);
     load_steam_entries();
-
     if (include_steam_entries) {
         Entries_insert_steam();
     }
+    if (debug) printf("%u Entries Total\n", all_entries->size);
+    Entries_sort(all_entries);
 }
 
 int main(int argc, char * argv[]) {
+    // Defaults
     debug = false;
     dev_mode = false;
     config_dir = NULL;
     visable_entries = NULL;
     steam_path = NULL;
-    include_steam_entries = false;
+    include_steam_entries = true;
     entries_changed = false;
     sort_by = LAST_RAN;
 
+    // TODO: Ability to change URL
     steam_header_url_head = STEAM_HEADER_URL_HEAD;
     steam_header_url_tail = STEAM_HEADER_URL_TAIL;
     steam_header_url_head_len = strlen(STEAM_HEADER_URL_HEAD);
     steam_header_url_tail_len = strlen(STEAM_HEADER_URL_TAIL);
 
+    // Command Line Arguments
     GError * error = NULL;
     GOptionContext * option_context = g_option_context_new(
         "Launch applications using Steam 460x215 images"
@@ -189,16 +192,18 @@ int main(int argc, char * argv[]) {
         debug = true;
     }
 
+    // Load Data
     init_data();
 
-    GtkApplication * app;
-    int status;
-
-    app = gtk_application_new("us.hornsey.launcher", G_APPLICATION_FLAGS_NONE);
+    // Run Gtk Application
+    GtkApplication * app = gtk_application_new(
+        "us.hornsey.launcher", G_APPLICATION_FLAGS_NONE
+    );
     g_signal_connect(app, "activate", G_CALLBACK(init_main_window), NULL);
-    status = g_application_run(G_APPLICATION(app), argc, argv);
+    int status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
 
+    // Clean Up Data
     if (visable_entries != all_entries) Entries_delete(visable_entries);
     Entries_delete_all(all_entries);
     Entries_delete_all(steam_entries);

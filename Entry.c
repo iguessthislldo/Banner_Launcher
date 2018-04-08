@@ -13,15 +13,19 @@ Entry * Entry_new() {
 }
 
 void Entry_delete(Entry * entry) {
-    if (entry->name) g_free(entry->name);
-    if (entry->uc_name) g_free(entry->uc_name);
-    if (entry->image_path) g_free(entry->image_path);
-    if (entry->image) g_object_unref(entry->image);
-    if (entry->event_box) g_object_unref(entry->event_box);
-    if (entry->exec) g_free(entry->exec);
-    if (entry->cd) g_free(entry->cd);
-    if (entry->last_ran) free(entry->last_ran);
-    free(entry);
+    if (entry) {
+        if (debug) printf("Deleting entry %s: %s\n", entry->id, entry->name);
+        if (entry->id) g_free(entry->id);
+        if (entry->name) g_free(entry->name);
+        if (entry->uc_name) g_free(entry->uc_name);
+        if (entry->image_path) g_free(entry->image_path);
+        if (entry->image) g_object_unref(entry->image);
+        if (entry->event_box) g_object_unref(entry->event_box);
+        if (entry->exec) g_free(entry->exec);
+        if (entry->cd) g_free(entry->cd);
+        if (entry->last_ran) free(entry->last_ran);
+        free(entry);
+    }
 }
 
 void Entry_set_name(Entry * entry, const char * name) {
@@ -173,6 +177,10 @@ bool Entries_load(Entries * entries, const gchar * path) {
                 entry->steam_id = g_key_file_get_string(
                     ini, groups[i], "steam_id", NULL
                 );
+                entry->downloaded_image = g_key_file_get_string(
+                    ini, groups[i], "downloaded_image", NULL
+                );
+                if (!entry->downloaded_image) download_images_count++;
             }
 
             if (debug) {
@@ -292,48 +300,36 @@ void Entries_sort(Entries * entries) {
 }
 
 void Entries_insert_steam() {
+    if (debug) printf("Including New Steam Entries:\n");
     for (Node * snode = steam_entries->head; snode; snode = snode->next) {
         bool found = false;
         for (Node * n = all_entries->head; n; n = n->next) {
-            if (n->entry->steam_id == snode->entry->steam_id) {
-                found = true;
-                break;
+            if (n->entry->steam_id) {
+                if (!strcmp(n->entry->steam_id, snode->entry->steam_id)) {
+                    found = true;
+                    break;
+                }
             }
         }
         if (!found) {
             Entry * entry = snode->entry;
+            if (debug) printf("  %s: %s\n", entry->steam_id, entry->name);
             Entries_append(all_entries, entry);
+            download_images_count++;
 
-            // Take care of id and file name
+            // id
             char id[64];
             unsigned id_len = sprintf(&id[0], "%u", next_id++);
             entry->id = g_strdup(&id[0]);
-            char * image_name = malloc(id_len + 5);
-            sprintf(image_name, "%s.jpg", entry->id);
-            entry->image_path = g_strdup(image_name);
-            char * header_path = g_build_filename(
-                banners_dir,
-                image_name,
-            NULL);
 
-            // Build URL
-            unsigned steam_id_len = strlen(entry->steam_id);
-            char * steam_header_url = malloc(
-                steam_header_url_head_len +
-                steam_header_url_tail_len +
-                steam_id_len + 1
-            );
-            sprintf(steam_header_url, "%s%s%s",
-                steam_header_url_head,
-                entry->steam_id,
-                steam_header_url_tail
-            );
+            // image_path
+            char * image_path = malloc(id_len + 5);
+            sprintf(image_path, "%s.jpg", entry->id);
+            entry->image_path = g_strdup(image_path);
+            free(image_path);
 
-            // Download
-            printf("%s -> %s\n", steam_header_url, header_path);
-            download(NULL, update_bar, steam_header_url, header_path);
-            free(steam_header_url);
-            g_free(header_path);
+            // "Remove" from steam_entries
+            snode->entry = NULL;
         }
     }
 }
@@ -356,8 +352,12 @@ bool Entries_save(const char * path) {
             g_key_file_set_string(ini, e->id, "exec", e->exec);
         if (e->cd)
             g_key_file_set_string(ini, e->id, "cd", e->cd);
-        if (e->steam_id)
+        if (e->steam_id) {
             g_key_file_set_string(ini, e->id, "steam_id", e->steam_id);
+            g_key_file_set_boolean(ini, e->id,
+                "downloaded_image", e->downloaded_image
+            );
+        }
     }
 
     // Save entries to file

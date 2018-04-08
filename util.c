@@ -32,9 +32,11 @@ bool download(
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
-    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, data);
-    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, callback);
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    if (callback) {
+        curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, data);
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, callback);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    }
 
     CURLcode result = curl_easy_perform(curl);
     if (result != CURLE_OK) {

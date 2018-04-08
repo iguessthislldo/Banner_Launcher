@@ -31,6 +31,7 @@ struct Entry_struct {
 
     // Run through "steam steam://run/<appid>"
     char * steam_id;
+    bool downloaded_image;
 
     // GUI Elements
     GtkWidget * image;

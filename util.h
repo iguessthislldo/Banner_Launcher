@@ -5,6 +5,8 @@
 /*
  * Try to download a file from "url" to "destination" with "data"
  * being passed to "callback".
+ *
+ * Returns true if there was an error
  */
 bool download(void * data,
     int (*callback)(void*, double, double, double, double),

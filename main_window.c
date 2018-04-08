@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "steam.h"
+#include "util.h"
 #include "main_window.h"
 
 GtkWidget * window;
@@ -18,10 +20,10 @@ void entry_click(GtkWidget * widget, GdkEventButton * event, gpointer data) {
         "Mouse button %d on Entry #%s\n", event->button, entry->id
     );
     switch (event->button) {
-    case 1:
+    case 1: // Left Mouse Button
         Entry_run(entry);
         break;
-    case 3:
+    case 3: // Right Mouse Button
         gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
         break;
     default:
@@ -128,6 +130,108 @@ void init_entries_gui(Entries * entries) {
     }
 }
 
+
+bool download_cancelled;
+unsigned finished_count;
+
+gpointer download_thread(gpointer data) {
+    GtkWidget * dl_modal = ((GtkWidget**)data)[0];
+    GtkWidget * dl_bar = ((GtkWidget**)data)[1];
+
+    finished_count = 0;
+
+    for (Node * node = all_entries->head; node; node = node->next) {
+        Entry * entry = node->entry;
+        if (entry->steam_id && !entry->downloaded_image) {
+            gtk_progress_bar_set_text(GTK_PROGRESS_BAR(dl_bar), entry->name);
+            char * path = g_build_filename(
+                banners_dir,
+                entry->image_path,
+            NULL);
+
+            // Build URL
+            unsigned steam_id_len = strlen(entry->steam_id);
+            char * url = malloc(
+                steam_header_url_head_len +
+                steam_header_url_tail_len +
+                steam_id_len + 1
+            );
+            sprintf(url, "%s%s%s",
+                steam_header_url_head,
+                entry->steam_id,
+                steam_header_url_tail
+            );
+
+            // Download
+            if (debug) printf("  Download %s\n    to %s\n", url, path);
+            download(NULL, NULL, url, path);
+            gtk_progress_bar_set_fraction(
+                GTK_PROGRESS_BAR(dl_bar),
+                ((double) finished_count) / download_images_count
+            );
+            finished_count++;
+
+            // Cleanup
+            g_free(path);
+            free(url);
+        }
+        //gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(dl_bar), );
+
+        if (download_cancelled) {
+            break;
+        }
+    }
+    gtk_widget_destroy(dl_modal);
+    return NULL;
+}
+
+void download_modal() {
+    download_cancelled = false;
+
+    // Create Download Modal Dialog
+    const char * dl_msg = "Downloading Images for Steam Games...";
+    GtkWidget * dl_modal = gtk_dialog_new_with_buttons(
+        dl_msg,
+        GTK_WINDOW(window),
+        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+        "Cancel", GTK_RESPONSE_CANCEL,
+        NULL
+    );
+
+    // Add Contents to Dialog
+    GtkWidget * content = gtk_dialog_get_content_area(GTK_DIALOG(dl_modal));
+    gtk_container_add(GTK_CONTAINER(content), gtk_label_new(dl_msg));
+    GtkWidget * dl_bar = gtk_progress_bar_new();
+    gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(dl_bar), true);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(dl_bar), 0.0);
+    gtk_container_add(GTK_CONTAINER(content), dl_bar);
+
+    // Run Download thread
+    GtkWidget * thread_data[2];
+    thread_data[0] = dl_modal;
+    thread_data[1] = dl_bar;
+    GThread * dl_thread = g_thread_new(
+        "download thread", download_thread, &thread_data
+    );
+
+    // Show Dialog
+    gtk_widget_show_all(dl_modal);
+    GtkResponseType r = gtk_dialog_run(GTK_DIALOG(dl_modal));
+
+    // Handle Results
+    if (r == GTK_RESPONSE_NONE) {
+        if (debug) printf("  Downloads Finished\n");
+    } else {
+        // Download was cancelled either by "Cancel" button or the dialog
+        // was closed
+        if (debug) printf("  Downloads Cancelled\n");
+        download_cancelled = true;
+    }
+
+    // Wait for thread to finish (Should already be done or almost done.)
+    g_thread_join(dl_thread);
+}
+
 void quit() {
     gtk_widget_destroy(GTK_WIDGET(window));
 }
@@ -171,7 +275,7 @@ void init_menu() {
     GtkWidget * add_item = gtk_menu_item_new_with_label("Add Game(s)");
     gtk_menu_attach(GTK_MENU(menu), add_item, 0, 1, a++, b++);
 
-    // Sort Entries
+    // Sort Entries By
     GtkWidget * sort_by_item = gtk_menu_item_new_with_label("Sort By");
     GtkWidget * sort_by_menu = gtk_menu_new();
     char * names[3] = {"Last Ran", "Most Ran", "Least Ran"};
@@ -237,12 +341,22 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
 
     // Scrolling widget for Entries
     scroll = gtk_scrolled_window_new(NULL, NULL);
-    gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(scroll), BANNER_HIGHT * 4);
+    gtk_scrolled_window_set_min_content_height(
+        GTK_SCROLLED_WINDOW(scroll), BANNER_HIGHT * 4);
     gtk_container_add(GTK_CONTAINER(layout), scroll);
-    grid = gtk_grid_new();
-    gtk_container_add(GTK_CONTAINER(scroll), grid);
+
+    // Show Window without Entries
+    gtk_widget_show_all(window);
+
+    // Download Missing Steam Images
+    if (debug) printf("download_image_count: %u\n", download_images_count);
+    if (download_images_count)  {
+        download_modal();
+    }
 
     // Init Entry Elements and add them
+    grid = gtk_grid_new();
+    gtk_container_add(GTK_CONTAINER(scroll), grid);
     init_entries_gui(all_entries);
     visable_entries = all_entries;
     update_visable_entries();
@@ -250,18 +364,7 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     // Entry Context Menu
     init_menu();
 
-    // Show Window
-    gtk_widget_show_all(window);
-}
-
-int update_bar(
-    void * data,
-    double dltotal, double dlnow,
-    double ultotal, double ulnow
-) {
-    if (data) {
-        gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(data), dlnow / dltotal);
-    }
-    return 0;
+    // Show Window with Entries
+    gtk_widget_show_all(grid);
 }
 

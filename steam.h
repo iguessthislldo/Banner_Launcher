@@ -11,6 +11,8 @@ unsigned steam_header_url_head_len;
 char * steam_header_url_tail;
 unsigned steam_header_url_tail_len;
 
+unsigned download_images_count;
+
 void load_steam_entries();
 
 #endif

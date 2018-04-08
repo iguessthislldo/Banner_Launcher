@@ -8,6 +8,8 @@
 #include "steam.h"
 #include "launcher.h"
 
+unsigned download_images_count = 0;
+
 void load_steam_entries() {
 
     // Resolve steam directory
@@ -126,7 +128,7 @@ void load_steam_entries() {
         // Create Entry
         if (debug) printf("  %s: %s\n", id->str, name->str);
         Entry * entry = Entry_new();
-        entry->name = g_strdup(name->str);
+        Entry_set_name(entry, name->str);
         entry->steam_id = g_strdup(id->str);
         Entries_append(steam_entries, entry);
 
