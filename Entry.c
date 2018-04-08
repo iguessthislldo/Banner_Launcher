@@ -315,6 +315,7 @@ void Entries_insert_steam() {
             Entry * entry = snode->entry;
             if (debug) printf("  %s: %s\n", entry->steam_id, entry->name);
             Entries_append(all_entries, entry);
+            entries_changed = true;
             download_images_count++;
 
             // id

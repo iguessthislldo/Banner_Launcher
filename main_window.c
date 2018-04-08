@@ -164,7 +164,8 @@ gpointer download_thread(gpointer data) {
 
             // Download
             if (debug) printf("  Download %s\n    to %s\n", url, path);
-            download(NULL, NULL, url, path);
+            entry->downloaded_image = !download(NULL, NULL, url, path);
+            entries_changed = true;
             gtk_progress_bar_set_fraction(
                 GTK_PROGRESS_BAR(dl_bar),
                 ((double) finished_count) / download_images_count

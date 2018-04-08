@@ -158,6 +158,8 @@ void init_data() {
 }
 
 int main(int argc, char * argv[]) {
+    entries_changed = false;
+
     // Defaults
     debug = false;
     dev_mode = false;
@@ -202,6 +204,13 @@ int main(int argc, char * argv[]) {
     g_signal_connect(app, "activate", G_CALLBACK(init_main_window), NULL);
     int status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
+
+    if (entries_changed) {
+        if (debug) printf("Entries Changed, Saving Entries\n");
+        Entries_save(entries_file);
+    } else if (debug) {
+        printf("Entries not changed, not saving\n");
+    }
 
     // Clean Up Data
     if (visable_entries != all_entries) Entries_delete(visable_entries);
