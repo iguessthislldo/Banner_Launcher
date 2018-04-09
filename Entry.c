@@ -18,8 +18,8 @@ void Entry_delete(Entry * entry) {
         if (entry->id) g_free(entry->id);
         if (entry->name) g_free(entry->name);
         if (entry->uc_name) g_free(entry->uc_name);
-        if (entry->image_path) g_free(entry->image_path);
-        if (entry->image) g_object_unref(entry->image);
+        if (entry->image) g_free(entry->image);
+        if (entry->image_widget) g_object_unref(entry->image_widget);
         if (entry->event_box) g_object_unref(entry->event_box);
         if (entry->exec) g_free(entry->exec);
         if (entry->cd) g_free(entry->cd);
@@ -158,8 +158,8 @@ bool Entries_load(Entries * entries, const gchar * path) {
             // count
             entry->count = g_key_file_get_integer(ini, groups[i], "count", NULL);
 
-            // image_path
-            entry->image_path = g_key_file_get_string(ini, groups[i], "image", NULL);
+            // image
+            entry->image = g_key_file_get_string(ini, groups[i], "image", NULL);
 
             // last_ran
             if (g_key_file_has_key(ini, groups[i], "last_ran", NULL)) {
@@ -300,6 +300,19 @@ void Entries_sort(Entries * entries) {
 }
 
 void Entries_insert_steam() {
+    if (debug) printf("Checking Previous Steam Entries:\n");
+    for (Node * n = all_entries->head; n; n = n->next) {
+        if (n->entry->steam_id) {
+            bool found = false;
+            for (Node * sn = steam_entries->head; sn; sn = sn->next) {
+                if (!strcmp(n->entry->steam_id, sn->entry->steam_id)) {
+                    found = true;
+                    break;
+                }
+            }
+            n->entry->disabled = !found;
+        }
+    }
     if (debug) printf("Including New Steam Entries:\n");
     for (Node * snode = steam_entries->head; snode; snode = snode->next) {
         bool found = false;
@@ -323,11 +336,11 @@ void Entries_insert_steam() {
             unsigned id_len = sprintf(&id[0], "%u", next_id++);
             entry->id = g_strdup(&id[0]);
 
-            // image_path
-            char * image_path = malloc(id_len + 5);
-            sprintf(image_path, "%s.jpg", entry->id);
-            entry->image_path = g_strdup(image_path);
-            free(image_path);
+            // image
+            char * image = malloc(id_len + 5);
+            sprintf(image, "%s.jpg", entry->id);
+            entry->image = g_strdup(image);
+            free(image);
 
             // "Remove" from steam_entries
             snode->entry = NULL;
@@ -344,7 +357,7 @@ bool Entries_save(const char * path) {
     for (Node * node = all_entries->head; node; node = node->next) {
         Entry * e = node->entry;
         g_key_file_set_string(ini, e->id, "name", e->name);
-        g_key_file_set_string(ini, e->id, "image", e->image_path);
+        g_key_file_set_string(ini, e->id, "image", e->image);
         g_key_file_set_integer(ini, e->id, "count", e->count);
         g_key_file_set_boolean(ini, e->id, "favorite", e->favorite);
         if (e->last_ran)

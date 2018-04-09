@@ -14,11 +14,14 @@
  */
 typedef struct Entry_struct Entry;
 struct Entry_struct {
+    /*
+     * Save/Load
+     */
+
     // Common
     char * id;
     char * name;
-    char * uc_name;
-    char * image_path;
+    char * image;
 
     // Sort
     unsigned count; // Number of times this Entry has been run
@@ -33,8 +36,14 @@ struct Entry_struct {
     char * steam_id;
     bool downloaded_image;
 
+    /*
+     * Runtime
+     */
+    char * uc_name; // Generated from name
+    bool disabled;
+
     // GUI Elements
-    GtkWidget * image;
+    GtkWidget * image_widget;
     GtkWidget * event_box;
 };
 

@@ -1,6 +1,11 @@
 EXEC=banner_launcher
+FAKE=debug_config
+
+.PHONY: install uninstall clean fake
 
 all: $(EXEC)
+
+fake: $(FAKE)
 
 $(EXEC): launcher.c Entry.c steam.c util.c main_window.c
 	gcc -g `pkg-config --cflags gtk+-3.0` -o $@ $^ -lcurl `pkg-config --libs gtk+-3.0`
@@ -16,5 +21,5 @@ clean:
 	rm -f $(EXEC)
 	rm -fr debug_config
 
-fake: $(EXEC)
+$(FAKE): $(EXEC)
 	bash generate_fake_entries.sh

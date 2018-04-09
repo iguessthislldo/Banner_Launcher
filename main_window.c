@@ -81,11 +81,12 @@ void init_entries_gui(Entries * entries) {
             G_CALLBACK(entry_click),
             (gpointer) entry
         );
+        gtk_widget_set_tooltip_text(event_box, entry->name);
 
         // Image
         gchar * full_image_path = g_build_filename(
             banners_dir,
-            entry->image_path,
+            entry->image,
         NULL);
         GError * error = NULL;
         GdkPixbuf * image = gdk_pixbuf_new_from_file_at_scale(
@@ -95,10 +96,12 @@ void init_entries_gui(Entries * entries) {
         );
         g_free(full_image_path);
         if (image) { // Create Normal GUI
-            entry->image = gtk_image_new_from_pixbuf(image);
+            if (entry->disabled)
+                gdk_pixbuf_saturate_and_pixelate(image, image, 0, true);
+            entry->image_widget = gtk_image_new_from_pixbuf(image);
             g_object_unref(image); // Image is copied and no longer needed
-            g_object_ref(entry->image);
-            gtk_container_add(GTK_CONTAINER(event_box), entry->image);
+            g_object_ref(entry->image_widget);
+            gtk_container_add(GTK_CONTAINER(event_box), entry->image_widget);
 
         } else { // Create Error Entry GUI
             char * error_message = g_strdup_printf(
@@ -146,7 +149,7 @@ gpointer download_thread(gpointer data) {
             gtk_progress_bar_set_text(GTK_PROGRESS_BAR(dl_bar), entry->name);
             char * path = g_build_filename(
                 banners_dir,
-                entry->image_path,
+                entry->image,
             NULL);
 
             // Build URL
