@@ -37,7 +37,7 @@ void add_entries_to_grid(Entries * entries) {
     int cols = GRID_WIDTH;
     for (Node * n = entries->head; n; n = n->next) {
         Entry * e = n->entry;
-        gtk_grid_attach(GTK_GRID(grid), e->event_box, col, row, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), e->fixed_widget, col, row, 1, 1);
         if (++col >= cols) {
             row++;
             col = 0;
@@ -65,23 +65,80 @@ void filter_changed(GtkEntryBuffer * b) {
     update_visable_entries();
 }
 
+bool entry_hover(GtkWidget * widget, GdkEvent * event, gpointer data) {
+    Entry * entry = (Entry *) data;
+    if (debug) printf("Hover over %s\n", entry->name);
+
+    if (entry->info_box) {
+        gtk_widget_show(entry->info_box);
+    }
+
+    return false;
+}
+
+bool entry_unhover(GtkWidget * widget, GdkEvent * event, gpointer data) {
+    Entry * entry = (Entry *) data;
+    if (debug) printf("Unhover over %s\n", entry->name);
+    if (entry->info_box) {
+        gtk_widget_hide(entry->info_box);
+    }
+    return false;
+}
+
 void init_entries_gui(Entries * entries) {
+
     for (Node * node = entries->head; node; node = node->next) {
         Entry * entry = node->entry;
+
+        // Fixed Widget
+        GtkWidget * fixed = gtk_fixed_new();
+        g_object_ref(fixed);
+        entry->fixed_widget = fixed;
 
         // Event Box
         GtkWidget * event_box = gtk_event_box_new();
         entry->event_box = event_box;
         g_object_ref(event_box);
-        gtk_widget_set_size_request(event_box, BANNER_WIDTH, BANNER_HIGHT);
+        gtk_widget_set_size_request(event_box, BANNER_WIDTH, BANNER_HEIGHT);
         gtk_widget_set_events(event_box, GDK_BUTTON_RELEASE_MASK);
+        gtk_fixed_put(GTK_FIXED(fixed), event_box, 0, 0);
+
+        // Infobox
+        entry->info_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+
+        // TODO replace with whatever convoluted thing GTK wants me to use.
+        GdkRGBA c = {1.0, 1.0, 1.0, 1.0};
+        gtk_widget_override_background_color(entry->info_box, GTK_STATE_FLAG_NORMAL, &c);
+        g_object_ref(entry->info_box);
+        entry->name_label = gtk_label_new(entry->name);
+        gtk_container_add(GTK_CONTAINER(entry->info_box), entry->name_label);
+        gtk_widget_set_size_request(entry->info_box, BANNER_WIDTH, BANNER_HEIGHT/8);
+        gtk_fixed_put(GTK_FIXED(entry->fixed_widget), entry->info_box, 0,
+            BANNER_HEIGHT - BANNER_HEIGHT/8);
+
+        // On Hover
+        g_signal_connect(
+            G_OBJECT(event_box),
+            "enter-notify-event",
+            G_CALLBACK(entry_hover),
+            (gpointer) entry
+        );
+
+        // On "Un" Hover
+        g_signal_connect(
+            G_OBJECT(event_box),
+            "leave-notify-event",
+            G_CALLBACK(entry_unhover),
+            (gpointer) entry
+        );
+
+        // Click Events
         g_signal_connect(
             G_OBJECT(event_box),
             "button_release_event",
             G_CALLBACK(entry_click),
             (gpointer) entry
         );
-        gtk_widget_set_tooltip_text(event_box, entry->name);
 
         // Image
         gchar * full_image_path = g_build_filename(
@@ -90,7 +147,7 @@ void init_entries_gui(Entries * entries) {
         NULL);
         GError * error = NULL;
         GdkPixbuf * image = gdk_pixbuf_new_from_file_at_scale(
-            full_image_path, BANNER_WIDTH, BANNER_HIGHT,
+            full_image_path, BANNER_WIDTH, BANNER_HEIGHT,
             false, // Do not perserve aspect ratio
             &error
         );
@@ -132,7 +189,6 @@ void init_entries_gui(Entries * entries) {
 
     }
 }
-
 
 bool download_cancelled;
 unsigned finished_count;
@@ -179,7 +235,6 @@ gpointer download_thread(gpointer data) {
             g_free(path);
             free(url);
         }
-        //gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(dl_bar), );
 
         if (download_cancelled) {
             break;
@@ -258,8 +313,11 @@ static bool kb_shortcuts(GtkWindow * widget, GdkEventKey *event, gpointer data) 
     return false;
 }
 
+char * sort_by_names[3] = {"Last Ran", "Most Ran", "Least Ran"};
+
 void set_sort_by(void * value) {
     sort_by = (Sort_By) value;
+    if (debug) printf("Sorting Entries by %s\n", sort_by_names[sort_by]);
     Entries_sort(all_entries);
     update_visable_entries();
 }
@@ -282,10 +340,10 @@ void init_menu() {
     // Sort Entries By
     GtkWidget * sort_by_item = gtk_menu_item_new_with_label("Sort By");
     GtkWidget * sort_by_menu = gtk_menu_new();
-    char * names[3] = {"Last Ran", "Most Ran", "Least Ran"};
     GSList * group = NULL;
     for (unsigned i = 0; i < 3; i++) {
-        GtkWidget * item = gtk_radio_menu_item_new_with_label(group, names[i]);
+        GtkWidget * item = gtk_radio_menu_item_new_with_label(
+            group, sort_by_names[i]);
         if (!i) gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), true);
         group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(item));
         gtk_menu_attach(GTK_MENU(sort_by_menu), item, 0, 1, i, i+1);
@@ -316,7 +374,7 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     gtk_window_set_resizable(GTK_WINDOW(window), false);
     gtk_window_set_title(GTK_WINDOW(window), APP_NAME);
     gtk_window_set_default_size(GTK_WINDOW(window),
-        BANNER_WIDTH * GRID_WIDTH, BANNER_HIGHT * 4
+        BANNER_WIDTH * GRID_WIDTH, BANNER_HEIGHT * 4
     );
 
     // Handle Keyboard Shortcuts
@@ -346,7 +404,7 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     // Scrolling widget for Entries
     scroll = gtk_scrolled_window_new(NULL, NULL);
     gtk_scrolled_window_set_min_content_height(
-        GTK_SCROLLED_WINDOW(scroll), BANNER_HIGHT * 4);
+        GTK_SCROLLED_WINDOW(scroll), BANNER_HEIGHT * 4);
     gtk_container_add(GTK_CONTAINER(layout), scroll);
 
     // Show Window without Entries
@@ -370,5 +428,11 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
 
     // Show Window with Entries
     gtk_widget_show_all(grid);
+
+    // Hide all info_boxes
+    for (Node * node = all_entries->head; node; node = node->next) {
+        Entry * e = node->entry;
+        gtk_widget_hide(e->info_box);
+    }
 }
 

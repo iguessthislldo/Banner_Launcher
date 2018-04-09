@@ -15,15 +15,20 @@ Entry * Entry_new() {
 void Entry_delete(Entry * entry) {
     if (entry) {
         if (debug) printf("Deleting entry %s: %s\n", entry->id, entry->name);
+
         if (entry->id) g_free(entry->id);
         if (entry->name) g_free(entry->name);
         if (entry->uc_name) g_free(entry->uc_name);
         if (entry->image) g_free(entry->image);
-        if (entry->image_widget) g_object_unref(entry->image_widget);
-        if (entry->event_box) g_object_unref(entry->event_box);
+
         if (entry->exec) g_free(entry->exec);
         if (entry->cd) g_free(entry->cd);
         if (entry->last_ran) free(entry->last_ran);
+
+        if (entry->fixed_widget) g_object_unref(entry->fixed_widget);
+        if (entry->image_widget) g_object_unref(entry->image_widget);
+        if (entry->event_box) g_object_unref(entry->event_box);
+
         free(entry);
     }
 }
@@ -127,7 +132,7 @@ void Entries_delete_all(Entries * entries) {
 
 Entries * Entries_clear_container(GtkContainer * container, Entries * entries) {
     for (Node * node = entries->head; node; node = node->next) {
-        gtk_container_remove(container, node->entry->event_box);
+        gtk_container_remove(container, node->entry->fixed_widget);
     }
 }
 

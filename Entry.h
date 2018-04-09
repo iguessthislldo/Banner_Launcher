@@ -43,8 +43,11 @@ struct Entry_struct {
     bool disabled;
 
     // GUI Elements
+    GtkWidget * fixed_widget;
+    GtkWidget * info_box;
     GtkWidget * image_widget;
     GtkWidget * event_box;
+    GtkWidget * name_label;
 };
 
 /*

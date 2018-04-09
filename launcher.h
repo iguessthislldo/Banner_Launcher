@@ -7,7 +7,7 @@
 
 #define APP_NAME "Banner Launcher"
 #define BANNER_WIDTH 460
-#define BANNER_HIGHT 215
+#define BANNER_HEIGHT 215
 #define GRID_WIDTH 3
 
 // Sorting State
