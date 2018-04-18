@@ -113,6 +113,21 @@ void Entries_append(Entries * entries, Entry * entry) {
     entries->size++;
 }
 
+void Entries_remove(Entries * entries, Entry * entry) {
+    Node * prev = NULL;
+    for (Node * node = entries->head; node; node = node->next) {
+        if (node->entry == entry) {
+            if (prev) prev->next = node->next;
+            if (node == entries->head) entries->head = node->next;
+            if (node == entries->tail) entries->tail= prev;
+            entries->size--;
+            free(node);
+            return;
+        }
+        prev = node;
+    }
+}
+
 void Entries_delete(Entries * entries) {
     Node * next = entries->head;
     for (Node * node = next; node; node = next) {

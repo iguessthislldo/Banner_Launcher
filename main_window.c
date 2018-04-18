@@ -10,9 +10,16 @@ GtkWidget * layout;
 GtkWidget * filter;
 GtkWidget * scroll;
 GtkWidget * grid;
-GtkWidget * menu;
 
 char * filter_string;
+
+void entry_menu(Entry * entry);
+
+void hide_all_infobox() {
+    for (Node * n = visable_entries->head; n; n = n->next) {
+        gtk_widget_hide(n->entry->info_box);
+    }
+}
 
 void entry_click(GtkWidget * widget, GdkEventButton * event, gpointer data) {
     Entry * entry = (Entry *) data;
@@ -24,11 +31,12 @@ void entry_click(GtkWidget * widget, GdkEventButton * event, gpointer data) {
         Entry_run(entry);
         break;
     case 3: // Right Mouse Button
-        gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
+        entry_menu(entry);
         break;
     default:
         break;
     }
+    hide_all_infobox();
 }
 
 void add_entries_to_grid(Entries * entries) {
@@ -84,6 +92,41 @@ bool entry_unhover(GtkWidget * widget, GdkEvent * event, gpointer data) {
     }
     return false;
 }
+
+bool entry_remove(gpointer data) {
+    Entry * entry = (Entry *) data;
+    GtkWidget * modal = gtk_dialog_new_with_buttons(
+        "Remove Game?",
+        GTK_WINDOW(window),
+        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+        "Remove", GTK_RESPONSE_OK,
+        "Cancel", GTK_RESPONSE_CANCEL,
+        NULL
+    );
+
+    // Message
+    GtkWidget * content = gtk_dialog_get_content_area(GTK_DIALOG(modal));
+    gtk_container_add(GTK_CONTAINER(content), gtk_label_new(g_strjoin(
+        "", "Are you sure you want to remove \"", entry->name, "\"?", NULL
+    )));
+
+    // Show Dialog
+    gtk_widget_show_all(modal);
+    GtkResponseType r = gtk_dialog_run(GTK_DIALOG(modal));
+
+    // Handle Results
+    if (r == GTK_RESPONSE_OK) {
+        if (debug) printf("Remove Entry %s: %s\n", entry->id, entry->name);
+        Entries_clear_container(GTK_CONTAINER(grid), visable_entries);
+        Entries_remove(all_entries, entry);
+        if (all_entries != visable_entries) Entries_remove(visable_entries, entry);
+        Entry_delete(entry);
+        entries_changed = true;
+        update_visable_entries();
+    }
+    gtk_widget_destroy(modal);
+}
+
 
 void init_entries_gui(Entries * entries) {
 
@@ -162,13 +205,13 @@ void init_entries_gui(Entries * entries) {
 
         } else { // Create Error Entry GUI
             char * error_message = g_strdup_printf(
-                "Could load image %s: \"%s\"\n",
+                "Could load image %s: \"%s\"",
                 full_image_path,
                 error->message
             );
             g_error_free(error);
 
-            if (debug) fprintf(stderr, error_message);
+            if (debug) fprintf(stderr, "%s\n", error_message);
 
             GtkWidget * error_message_box = gtk_box_new(
                 GTK_ORIENTATION_VERTICAL, 0);
@@ -322,8 +365,8 @@ void set_sort_by(void * value) {
     update_visable_entries();
 }
 
-void init_menu() {
-    menu = gtk_menu_new();
+void entry_menu(Entry * entry) {
+    GtkWidget * menu = gtk_menu_new();
 
     unsigned a = 0;
     unsigned b = 1;
@@ -332,6 +375,10 @@ void init_menu() {
     gtk_menu_attach(GTK_MENU(menu), edit_item, 0, 1, a++, b++);
 
     GtkWidget * remove_item = gtk_menu_item_new_with_label("Remove Game");
+    g_signal_connect_swapped(
+        G_OBJECT(remove_item), "activate",
+        G_CALLBACK(entry_remove), entry
+    );
     gtk_menu_attach(GTK_MENU(menu), remove_item, 0, 1, a++, b++);
 
     GtkWidget * add_item = gtk_menu_item_new_with_label("Add Game(s)");
@@ -362,8 +409,10 @@ void init_menu() {
     gtk_menu_attach(GTK_MENU(menu), quit_item, 0, 1, a++, b++);
     g_signal_connect_swapped(G_OBJECT(quit_item), "activate", G_CALLBACK(quit), NULL);
 
-    gtk_menu_attach_to_widget(GTK_MENU(menu), window, NULL);
+    gtk_menu_attach_to_widget(GTK_MENU(menu), entry->fixed_widget, NULL);
     gtk_widget_show_all(menu);
+
+    gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
 }
 
 void init_main_window(GtkApplication * app, gpointer user_data) {
@@ -422,9 +471,6 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     init_entries_gui(all_entries);
     visable_entries = all_entries;
     update_visable_entries();
-
-    // Entry Context Menu
-    init_menu();
 
     // Show Window with Entries
     gtk_widget_show_all(grid);

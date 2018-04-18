@@ -102,6 +102,11 @@ Entries * Entries_new();
 void Entries_append(Entries * entries, Entry * entry);
 
 /*
+ * Find and Remove entry for the Entries list
+ */
+void Entries_remove(Entries * entries, Entry * entry);
+
+/*
  * Delete all the nodes and the Entry List, but NOT the Entries
  */
 void Entries_delete(Entries * entries);

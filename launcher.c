@@ -162,15 +162,6 @@ void init_data() {
     Entries_sort(all_entries);
 }
 
-void save_entries_if_changed() {
-    if (entries_changed) {
-        if (debug) printf("Entries Changed, Saving Entries\n");
-        Entries_save(entries_file);
-    } else if (debug) {
-        printf("Entries not changed, not saving\n");
-    }
-}
-
 int main(int argc, char * argv[]) {
     entries_changed = false;
 
@@ -231,6 +222,14 @@ int main(int argc, char * argv[]) {
     g_signal_connect(app, "activate", G_CALLBACK(init_main_window), NULL);
     int status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
+
+    // Save entries if changed
+    if (entries_changed) {
+        if (debug) printf("Entries Changed, Saving Entries\n");
+        Entries_save(entries_file);
+    } else if (debug) {
+        if (debug) printf("Entries not changed, not saving\n");
+    }
 
     // Clean Up Data
     if (visable_entries != all_entries) Entries_delete(visable_entries);
