@@ -7,6 +7,7 @@
 #include "launcher.h"
 
 void init_main_window(GtkApplication * app, gpointer user_data);
+void update_visable_entries();
 
 int update_bar(
     void * data,

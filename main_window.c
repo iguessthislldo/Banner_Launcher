@@ -4,6 +4,7 @@
 #include "steam.h"
 #include "util.h"
 #include "main_window.h"
+#include "edit_window.h"
 
 GtkWidget * window;
 GtkWidget * layout;
@@ -365,6 +366,10 @@ void set_sort_by(void * value) {
     update_visable_entries();
 }
 
+void menu_edit_callback(gpointer data) {
+    show_edit_window(window, (Entry *) data, true);
+}
+
 void entry_menu(Entry * entry) {
     GtkWidget * menu = gtk_menu_new();
 
@@ -372,6 +377,10 @@ void entry_menu(Entry * entry) {
     unsigned b = 1;
 
     GtkWidget * edit_item = gtk_menu_item_new_with_label("Edit Game");
+    g_signal_connect_swapped(
+        G_OBJECT(edit_item), "activate",
+        G_CALLBACK(menu_edit_callback), entry
+    );
     gtk_menu_attach(GTK_MENU(menu), edit_item, 0, 1, a++, b++);
 
     GtkWidget * remove_item = gtk_menu_item_new_with_label("Remove Game");

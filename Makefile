@@ -7,7 +7,7 @@ all: $(EXEC)
 
 fake: $(FAKE)
 
-$(EXEC): launcher.c Entry.c steam.c util.c main_window.c
+$(EXEC): launcher.c Entry.c steam.c util.c main_window.c edit_window.c
 	gcc -g `pkg-config --cflags gtk+-3.0` -o $@ $^ -lcurl `pkg-config --libs gtk+-3.0`
 
 install: $(EXEC)

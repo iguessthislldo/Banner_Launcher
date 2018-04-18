@@ -1,3 +1,6 @@
+#ifndef UTIL_HEADER
+#define UTIL_HEADER
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,3 +40,4 @@ char * get_time_string();
 //bool compare_time_strings(const char * a, const char * b)
 #define compare_time_strings(a, b) (strcmp((a), (b)) > 0)
 
+#endif
