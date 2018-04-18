@@ -120,6 +120,12 @@ bool entry_remove(gpointer data) {
         if (debug) printf("Remove Entry %s: %s\n", entry->id, entry->name);
         Entries_clear_container(GTK_CONTAINER(grid), visable_entries);
         Entries_remove(all_entries, entry);
+        gchar * full_image_path = g_build_filename(
+            banners_dir,
+            entry->image,
+        NULL);
+        unlink(full_image_path);
+        g_free(full_image_path);
         if (all_entries != visable_entries) Entries_remove(visable_entries, entry);
         Entry_delete(entry);
         entries_changed = true;
