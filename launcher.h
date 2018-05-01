@@ -15,10 +15,14 @@
 enum _Sort_By {
     LAST_RAN,
     MOST_RAN,
-    LEAST_RAN
+    LEAST_RAN,
+    ALPHABETICALLY,
+    ADDED
 };
 typedef enum _Sort_By Sort_By;
 Sort_By sort_by;
+#define SORT_MENU_COUNT 5
+const char * sort_by_names[SORT_MENU_COUNT];
 
 bool entries_changed;
 

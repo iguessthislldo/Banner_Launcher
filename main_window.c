@@ -353,7 +353,7 @@ static bool kb_shortcuts(GtkWindow * widget, GdkEventKey *event, gpointer data) 
         quit();
         return true;
 
-    // When Enter is pressed, run the first rntry in visable_entries
+    // When Enter is pressed, run the first entry in visable_entries
     case GDK_KEY_Return:
         if (visable_entries->size)
             Entry_run(visable_entries->head->entry);
@@ -363,11 +363,8 @@ static bool kb_shortcuts(GtkWindow * widget, GdkEventKey *event, gpointer data) 
     return false;
 }
 
-char * sort_by_names[3] = {"Last Ran", "Most Ran", "Least Ran"};
-
 void set_sort_by(void * value) {
     sort_by = (Sort_By) value;
-    if (debug) printf("Sorting Entries by %s\n", sort_by_names[sort_by]);
     Entries_sort(all_entries);
     update_visable_entries();
 }
@@ -377,56 +374,67 @@ void menu_edit_callback(gpointer data) {
 }
 
 void entry_menu(Entry * entry) {
-    GtkWidget * menu = gtk_menu_new();
+    static GtkWidget * menu = NULL;
+    if (menu) {
+        gtk_widget_destroy(menu);
+    }
+    menu = gtk_menu_new();
 
     unsigned a = 0;
     unsigned b = 1;
 
-    GtkWidget * edit_item = gtk_menu_item_new_with_label("Edit Game");
-    g_signal_connect_swapped(
-        G_OBJECT(edit_item), "activate",
-        G_CALLBACK(menu_edit_callback), entry
-    );
-    gtk_menu_attach(GTK_MENU(menu), edit_item, 0, 1, a++, b++);
+    if (entry) {
+        // Edit Game
+        GtkWidget * edit_item = gtk_menu_item_new_with_label("Edit Game");
+        g_signal_connect_swapped(
+            G_OBJECT(edit_item), "activate",
+            G_CALLBACK(menu_edit_callback), entry
+        );
+        gtk_menu_attach(GTK_MENU(menu), edit_item, 0, 1, a++, b++);
 
-    GtkWidget * remove_item = gtk_menu_item_new_with_label("Remove Game");
-    g_signal_connect_swapped(
-        G_OBJECT(remove_item), "activate",
-        G_CALLBACK(entry_remove), entry
-    );
-    gtk_menu_attach(GTK_MENU(menu), remove_item, 0, 1, a++, b++);
+        // Remove Game
+        GtkWidget * remove_item = gtk_menu_item_new_with_label("Remove Game");
+        g_signal_connect_swapped(
+            G_OBJECT(remove_item), "activate",
+            G_CALLBACK(entry_remove), entry
+        );
+        gtk_menu_attach(GTK_MENU(menu), remove_item, 0, 1, a++, b++);
+    }
 
+    // Add Game(s)
     GtkWidget * add_item = gtk_menu_item_new_with_label("Add Game(s)");
     gtk_menu_attach(GTK_MENU(menu), add_item, 0, 1, a++, b++);
 
-    // Sort Entries By
+    // Sort By
     GtkWidget * sort_by_item = gtk_menu_item_new_with_label("Sort By");
     GtkWidget * sort_by_menu = gtk_menu_new();
-    GSList * group = NULL;
-    for (unsigned i = 0; i < 3; i++) {
-        GtkWidget * item = gtk_radio_menu_item_new_with_label(
-            group, sort_by_names[i]);
-        if (!i) gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), true);
-        group = gtk_radio_menu_item_get_group(GTK_RADIO_MENU_ITEM(item));
-        gtk_menu_attach(GTK_MENU(sort_by_menu), item, 0, 1, i, i+1);
+    if (debug) printf("Sorted by %s\n", sort_by_names[sort_by]);
+    for (unsigned i = 0; i < SORT_MENU_COUNT; i++) {
+        GtkWidget * item = gtk_check_menu_item_new_with_label(
+            sort_by_names[i]);
+        gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(item), true);
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), i == sort_by);
         g_signal_connect_swapped(
             G_OBJECT(item), "activate",
-            G_CALLBACK(set_sort_by), (void *) (long unsigned) i
+            G_CALLBACK(set_sort_by), (void *) ((long unsigned) i)
         );
+        gtk_menu_attach(GTK_MENU(sort_by_menu), item, 0, 1, i, i+1);
     }
     gtk_menu_item_set_submenu(GTK_MENU_ITEM(sort_by_item), sort_by_menu);
     gtk_menu_attach(GTK_MENU(menu), sort_by_item, 0, 1, a++, b++);
 
+    // Settings
     GtkWidget * settings_item = gtk_menu_item_new_with_label("Settings");
     gtk_menu_attach(GTK_MENU(menu), settings_item, 0, 1, a++, b++);
 
+    // Quit Application
     GtkWidget * quit_item = gtk_menu_item_new_with_label("Quit");
     gtk_menu_attach(GTK_MENU(menu), quit_item, 0, 1, a++, b++);
     g_signal_connect_swapped(G_OBJECT(quit_item), "activate", G_CALLBACK(quit), NULL);
 
-    gtk_menu_attach_to_widget(GTK_MENU(menu), entry->fixed_widget, NULL);
+    // Show
+    gtk_menu_attach_to_widget(GTK_MENU(menu), window, NULL);
     gtk_widget_show_all(menu);
-
     gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
 }
 

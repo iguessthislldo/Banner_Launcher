@@ -11,6 +11,14 @@
 #include "util.h"
 #include "main_window.h"
 
+const char * sort_by_names[SORT_MENU_COUNT] = {
+    "Last Ran",
+    "Most Ran",
+    "Least Ran",
+    "Alphabetically",
+    "Added"
+};
+
 static GOptionEntry options[] = {
     {
         "config", 0, 0, G_OPTION_ARG_FILENAME, &config_dir,

@@ -257,6 +257,10 @@ bool Entry_compare(Entry * a, Entry * b) {
             else if (less_ran)
                 return true;
             break;
+        case ALPHABETICALLY:
+            break;
+        case ADDED:
+            return strcmp(a->id, b->id);
     };
     return g_utf8_collate(a->uc_name, b->uc_name) < 0;
 }
@@ -290,6 +294,8 @@ Node * _merge(Node * a, Node * b, Node ** _tail) {
 }
 
 void Entries_sort(Entries * entries) {
+    if (debug) printf("Sorting Entries by %s (%d)\n",
+        sort_by_names[sort_by], sort_by);
     if (entries->size == 0 || entries->size == 1) return;
 
     size_t rsize = entries->size + entries->size % 2;
@@ -374,8 +380,14 @@ bool Entries_save(const char * path) {
 
     g_key_file_set_integer(ini, "meta", "next_id", next_id);
 
+    // Sort by id
+    sort_by = ADDED;
+    Entries_sort(all_entries);
+
+    if (debug) printf("Saving Entries:\n");
     for (Node * node = all_entries->head; node; node = node->next) {
         Entry * e = node->entry;
+        if (debug) printf("    %s: %s\n", e->id, e->name);
         g_key_file_set_string(ini, e->id, "name", e->name);
         g_key_file_set_string(ini, e->id, "image", e->image);
         g_key_file_set_integer(ini, e->id, "count", e->count);

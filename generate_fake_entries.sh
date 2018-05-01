@@ -11,7 +11,7 @@ cat << EOF >> $d/entries.ini
 [$1]
 name=Entry $1
 image=$1.png
-count=0
+count=$(expr $n - $1)
 favorite=false
 exec=true"
 EOF
