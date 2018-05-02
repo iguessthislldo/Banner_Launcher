@@ -438,6 +438,21 @@ void entry_menu(Entry * entry) {
     gtk_menu_popup_at_pointer(GTK_MENU(menu), NULL);
 }
 
+/*
+ * Handle Touch Pad Scrolling or at least scroll events
+ */
+bool scroll_entries(GtkWidget * widget, GdkEvent * event, gpointer data) {
+    double delta_x, delta_y;
+    if (gdk_event_get_scroll_deltas(event, &delta_x, &delta_y)) {
+        GtkAdjustment * adj = gtk_scrolled_window_get_vadjustment(
+            GTK_SCROLLED_WINDOW(scroll));
+        gtk_adjustment_set_value(adj,
+            gtk_adjustment_get_value(adj) + 30 * delta_y);
+        return true;
+    }
+    return false;
+}
+
 void init_main_window(GtkApplication * app, gpointer user_data) {
     filter = NULL;
 
@@ -478,6 +493,8 @@ void init_main_window(GtkApplication * app, gpointer user_data) {
     gtk_scrolled_window_set_min_content_height(
         GTK_SCROLLED_WINDOW(scroll), BANNER_HEIGHT * 4);
     gtk_container_add(GTK_CONTAINER(layout), scroll);
+    // Handle Detla Scroll Events
+    g_signal_connect(window, "scroll-event", G_CALLBACK(scroll_entries), NULL);
 
     // Show Window without Entries
     gtk_widget_show_all(window);
