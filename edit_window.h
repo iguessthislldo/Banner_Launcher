@@ -7,6 +7,6 @@
 
 #include "Entry.h"
 
-void show_edit_window(GtkWidget * window, Entry * entry, bool edit);
+void show_edit_window(GtkWidget * window, Entry * entry);
 
 #endif

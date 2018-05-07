@@ -120,7 +120,7 @@ bool entry_remove(gpointer data) {
         if (debug) printf("Remove Entry %s: %s\n", entry->id, entry->name);
         Entries_clear_container(GTK_CONTAINER(grid), visable_entries);
         Entries_remove(all_entries, entry);
-        gchar * full_image_path = g_build_filename(
+        char * full_image_path = g_build_filename(
             banners_dir,
             entry->image,
         NULL);
@@ -370,7 +370,7 @@ void set_sort_by(void * value) {
 }
 
 void menu_edit_callback(gpointer data) {
-    show_edit_window(window, (Entry *) data, true);
+    show_edit_window(window, (Entry *) data);
 }
 
 void entry_menu(Entry * entry) {
@@ -403,6 +403,10 @@ void entry_menu(Entry * entry) {
 
     // Add Game(s)
     GtkWidget * add_item = gtk_menu_item_new_with_label("Add Game(s)");
+    g_signal_connect_swapped(
+        G_OBJECT(add_item), "activate",
+        G_CALLBACK(menu_edit_callback), 0
+    );
     gtk_menu_attach(GTK_MENU(menu), add_item, 0, 1, a++, b++);
 
     // Sort By

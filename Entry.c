@@ -38,6 +38,8 @@ void Entry_set_name(Entry * entry, const char * name) {
     if (entry->uc_name) g_free(entry->uc_name);
     entry->name = g_strdup(name);
     entry->uc_name = g_utf8_strup(name, -1);
+    if (entry->name_label)
+        gtk_label_set_text(GTK_LABEL(entry->name_label), entry->name);
 }
 
 bool Entry_is_valid(Entry * entry) {

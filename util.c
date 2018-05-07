@@ -72,6 +72,21 @@ bool starts_with(const char * string, const char * prefix) {
     }
 }
 
+char * file_ext(const char * path, unsigned * len) {
+    const char * ext = NULL;
+    const char * i;
+    if (len) *len = 0;
+    for (i = path; *i; i++) {
+        if (*i == '.') {
+            ext = i;
+            if (len) *len = 1;
+        } else {
+            if (len) (*len)++;
+        }
+    }
+    return (char *) (ext ? ext : i);
+}
+
 #define TIME_STRING_LEN 15
 // 4 + 2+2+2+2+2+  1 = 15
 // YYYYMMDDhhmmss /0

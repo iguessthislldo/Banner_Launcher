@@ -21,6 +21,15 @@ bool download(void * data,
  */
 bool starts_with(const char * string, const char * prefix);
 
+/*
+ * Return the file extension of the filename in the string, including
+ * the last period, in regex:
+ *     ^.*(\..*)$
+ * If there are no periods in the filename, it returns a pointer to
+ * the terminating null character.
+ */
+char * file_ext(const char * path, unsigned * len);
+
 /* ======================================================================
  * Time Functions
  *
