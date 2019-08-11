@@ -229,8 +229,21 @@ bool Entries_load(Entries * entries, const gchar * path) {
                     }
                 }
                 if (!entry->type) {
-                    error = 1;
+                    error = true;
                     printf("Invalid entry type: %s\n", entry_type);
+                    break;
+                }
+            } else {
+                printf("WARNING: Entry %s is missing type, guessing the type\n", entry->id);
+                bool has_steam_id = g_key_file_has_key(ini, groups[i], "steam_id", NULL);
+                bool has_exec = g_key_file_has_key(ini, groups[i], "exec", NULL);
+                if (has_steam_id && !has_exec) {
+                    entry->type = ENTRY_TYPE_STEAM;
+                } else if (!has_steam_id && has_exec) {
+                    entry->type = ENTRY_TYPE_SHELL;
+                } else {
+                    printf("Error: Couldn't Guess the Type\n");
+                    error = true;
                     break;
                 }
             }
@@ -276,7 +289,7 @@ bool Entries_load(Entries * entries, const gchar * path) {
         }
     } else {
         g_error("Could not load entries: \"%s\"\n", gerror->message);
-        error = 1;
+        error = true;
     }
     g_key_file_free(ini);
     return error;
@@ -459,15 +472,28 @@ bool Entries_save(const char * path) {
         g_key_file_set_boolean(ini, e->id, "favorite", e->favorite);
         if (e->last_ran)
             g_key_file_set_string(ini, e->id, "last_ran", e->last_ran);
-        if (e->info.shell.exec)
-            g_key_file_set_string(ini, e->id, "exec", e->info.shell.exec);
-        if (e->info.shell.cd)
-            g_key_file_set_string(ini, e->id, "cd", e->info.shell.cd);
-        if (e->info.steam.steam_id) {
+        switch (e->type) {
+        case ENTRY_TYPE_SHELL:
+            if (e->info.shell.exec)
+                g_key_file_set_string(ini, e->id, "exec", e->info.shell.exec);
+            if (e->info.shell.cd)
+                g_key_file_set_string(ini, e->id, "cd", e->info.shell.cd);
+            g_key_file_set_string(ini, e->id, "", e->name);
+            g_key_file_set_string(ini, e->id, "type", "shell");
+            break;
+        case ENTRY_TYPE_STEAM:
             g_key_file_set_string(ini, e->id, "steam_id", e->info.steam.steam_id);
             g_key_file_set_boolean(ini, e->id,
                 "downloaded_image", e->info.steam.downloaded_image
             );
+            g_key_file_set_string(ini, e->id, "type", "steam");
+            break;
+        case ENTRY_TYPE_XDG:
+            g_key_file_set_string(ini, e->id, "type", "xdg");
+            break;
+        default:
+            g_key_file_set_string(ini, e->id, "type", "invalid");
+            break;
         }
     }
 

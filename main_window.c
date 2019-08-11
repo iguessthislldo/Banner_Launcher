@@ -251,7 +251,7 @@ gpointer download_thread(gpointer data) {
 
     for (Node * node = all_entries->head; node; node = node->next) {
         Entry * entry = node->entry;
-        if (entry->type = ENTRY_TYPE_STEAM && !entry->info.steam.downloaded_image) {
+        if (entry->type == ENTRY_TYPE_STEAM && !entry->info.steam.downloaded_image) {
             gtk_progress_bar_set_text(GTK_PROGRESS_BAR(dl_bar), entry->name);
             char * path = g_build_filename(
                 banners_dir,
