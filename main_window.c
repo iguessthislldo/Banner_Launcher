@@ -201,7 +201,6 @@ void init_entries_gui(Entries * entries) {
             false, // Do not perserve aspect ratio
             &error
         );
-        g_free(full_image_path);
         if (image) { // Create Normal GUI
             if (entry->disabled)
                 gdk_pixbuf_saturate_and_pixelate(image, image, 0, true);
@@ -230,13 +229,10 @@ void init_entries_gui(Entries * entries) {
                     "image-missing", GTK_ICON_SIZE_DIALOG
                 )
             );
-            gtk_container_add(GTK_CONTAINER(error_message_box),
-                gtk_label_new(error_message)
-            );
             gtk_container_add(GTK_CONTAINER(event_box), error_message_box);
             g_free(error_message);
         }
-
+        g_free(full_image_path);
     }
 }
 
