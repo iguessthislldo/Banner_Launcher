@@ -8,22 +8,44 @@
 #include "util.h"
 #include "steam.h"
 
+const char const * entry_type_names[] = {
+    "invalid",
+    "shell",
+    "steam",
+    "xdg"
+};
+
 Entry * Entry_new() {
     return calloc(sizeof(Entry), 1);
 }
 
 void Entry_delete(Entry * entry) {
     if (entry) {
-        if (debug) printf("Deleting entry %s: %s\n", entry->id, entry->name);
+        if (debug) {
+            if (entry->id) {
+                printf("Deleting entry %s: %s\n", entry->id, entry->name);
+            } else {
+                printf("Deleting unused entry: %s\n", entry->name);
+            }
+        }
 
-        if (entry->id) g_free(entry->id);
-        if (entry->name) g_free(entry->name);
-        if (entry->uc_name) g_free(entry->uc_name);
-        if (entry->image) g_free(entry->image);
+        g_free(entry->id);
+        g_free(entry->name);
+        g_free(entry->uc_name);
+        g_free(entry->image);
 
-        if (entry->exec) g_free(entry->exec);
-        if (entry->cd) g_free(entry->cd);
-        if (entry->last_ran) free(entry->last_ran);
+        switch (entry->type) {
+        case ENTRY_TYPE_SHELL:
+            g_free(entry->info.shell.exec);
+            g_free(entry->info.shell.cd);
+            break;
+        case ENTRY_TYPE_STEAM:
+            g_free(entry->info.steam.steam_id);
+            break;
+        default:
+            break;
+        }
+        free(entry->last_ran);
 
         if (entry->fixed_widget) g_object_unref(entry->fixed_widget);
         if (entry->image_widget) g_object_unref(entry->image_widget);
@@ -53,6 +75,22 @@ bool Entry_is_valid(Entry * entry) {
     } else {
         return false;
     }
+
+    // TODO: Validate based on types
+    switch (entry->type) {
+    case ENTRY_TYPE_STEAM:
+        break;
+
+    case ENTRY_TYPE_SHELL:
+        break;
+
+    case ENTRY_TYPE_XDG:
+        break;
+
+    default:
+        return false;
+    }
+
     // TODO finish validation
     return true;
 }
@@ -60,15 +98,22 @@ bool Entry_is_valid(Entry * entry) {
 void Entry_run(Entry * entry) {
     char * exec = NULL;
 
-    if (entry->exec) {
-        if (entry->cd) {
-            chdir(entry->cd);
+    switch (entry->type) {
+    case ENTRY_TYPE_SHELL:
+        if (entry->info.shell.cd) {
+            chdir(entry->info.shell.cd);
         }
-        exec = malloc(6 + strlen(entry->exec));
-        sprintf(exec, "exec %s", entry->exec);
-    } else if (entry->steam_id) {
-        exec = malloc(28 + strlen(steam_path) + strlen(entry->steam_id));
-        sprintf(exec, "exec %s/steam.sh steam://run/%s", steam_path, entry->steam_id);
+        exec = malloc(6 + strlen(entry->info.shell.exec));
+        sprintf(exec, "exec %s", entry->info.shell.exec);
+        break;
+
+    case ENTRY_TYPE_STEAM:
+        exec = malloc(28 + strlen(steam_path) + strlen(entry->info.steam.steam_id));
+        sprintf(exec, "exec %s/steam.sh steam://run/%s", steam_path, entry->info.steam.steam_id);
+        break;
+
+    default:
+        fprintf(stderr, "Could not run \"%s\": Invalid Entry Type\n", entry->name);
     }
 
     if (exec) {
@@ -91,8 +136,7 @@ void Entry_run(Entry * entry) {
             "\"%s\" (%s) does not have a command"
             " or steam appid, can not run.\n",
             entry->name,
-            entry->id
-        );
+            entry->id);
     }
 
     free(exec);
@@ -157,9 +201,8 @@ bool Entries_load(Entries * entries, const gchar * path) {
     bool error = false;
     if (debug) printf("Loading Entries from %s\n", path);
     GKeyFile * ini = g_key_file_new();
-    if (g_key_file_load_from_file(
-        ini, path, G_KEY_FILE_NONE, NULL
-    )) {
+    GError * gerror = NULL;
+    if (g_key_file_load_from_file(ini, path, G_KEY_FILE_NONE, &gerror)) {
         gsize num_groups;
         gchar ** groups = g_key_file_get_groups(ini, &num_groups);
         if (!num_groups || strcmp("meta", groups[0])) {
@@ -177,6 +220,21 @@ bool Entries_load(Entries * entries, const gchar * path) {
                 g_key_file_get_string(ini, groups[i], "name", NULL)
             );
 
+            // type
+            const char * entry_type = g_key_file_get_string(ini, groups[i], "type", NULL);
+            if (entry_type) {
+                for (Entry_Type i = 0; i < ENTRY_TYPE_COUNT; i++) {
+                    if (!strcmp(entry_type, entry_type_names[i])) {
+                        entry->type = i;
+                    }
+                }
+                if (!entry->type) {
+                    error = 1;
+                    printf("Invalid entry type: %s\n", entry_type);
+                    break;
+                }
+            }
+
             // count
             entry->count = g_key_file_get_integer(ini, groups[i], "count", NULL);
 
@@ -189,20 +247,24 @@ bool Entries_load(Entries * entries, const gchar * path) {
             }
 
             // Run Information
-            if (g_key_file_has_key(ini, groups[i], "exec", NULL)) {
-                entry->exec = g_key_file_get_string(ini, groups[i], "exec", NULL);
-            }
-            if (g_key_file_has_key(ini, groups[i], "cd", NULL)) {
-                entry->cd = g_key_file_get_string(ini, groups[i], "cd", NULL);
-            }
-            if (g_key_file_has_key(ini, groups[i], "steam_id", NULL)) {
-                entry->steam_id = g_key_file_get_string(
-                    ini, groups[i], "steam_id", NULL
-                );
-                entry->downloaded_image = g_key_file_get_string(
-                    ini, groups[i], "downloaded_image", NULL
-                );
-                if (!entry->downloaded_image) download_images_count++;
+            switch (entry->type) {
+            case ENTRY_TYPE_SHELL:
+                if (g_key_file_has_key(ini, groups[i], "exec", NULL)) {
+                    entry->info.shell.exec =
+                        g_key_file_get_string(ini, groups[i], "exec", NULL);
+                }
+                if (g_key_file_has_key(ini, groups[i], "cd", NULL)) {
+                    entry->info.shell.cd =
+                        g_key_file_get_string(ini, groups[i], "cd", NULL);
+                }
+                break;
+            case ENTRY_TYPE_STEAM:
+                entry->info.steam.steam_id =
+                    g_key_file_get_string(ini, groups[i], "steam_id", NULL);
+                entry->info.steam.downloaded_image =
+                    g_key_file_get_string(ini, groups[i], "downloaded_image", NULL);
+                if (!entry->info.steam.downloaded_image) download_images_count++;
+                break;
             }
 
             if (debug) {
@@ -213,7 +275,8 @@ bool Entries_load(Entries * entries, const gchar * path) {
             Entries_append(entries, entry);
         }
     } else {
-        error = true;
+        g_error("Could not load entries: \"%s\"\n", gerror->message);
+        error = 1;
     }
     g_key_file_free(ini);
     return error;
@@ -330,10 +393,10 @@ void Entries_sort(Entries * entries) {
 void Entries_insert_steam() {
     if (debug) printf("Checking Previous Steam Entries:\n");
     for (Node * n = all_entries->head; n; n = n->next) {
-        if (n->entry->steam_id) {
+        if (n->entry->type == ENTRY_TYPE_STEAM) {
             bool found = false;
             for (Node * sn = steam_entries->head; sn; sn = sn->next) {
-                if (!strcmp(n->entry->steam_id, sn->entry->steam_id)) {
+                if (!strcmp(n->entry->info.steam.steam_id, sn->entry->info.steam.steam_id)) {
                     found = true;
                     break;
                 }
@@ -345,8 +408,8 @@ void Entries_insert_steam() {
     for (Node * snode = steam_entries->head; snode; snode = snode->next) {
         bool found = false;
         for (Node * n = all_entries->head; n; n = n->next) {
-            if (n->entry->steam_id) {
-                if (!strcmp(n->entry->steam_id, snode->entry->steam_id)) {
+            if (n->entry->info.steam.steam_id) {
+                if (!strcmp(n->entry->info.steam.steam_id, snode->entry->info.steam.steam_id)) {
                     found = true;
                     break;
                 }
@@ -354,7 +417,7 @@ void Entries_insert_steam() {
         }
         if (!found) {
             Entry * entry = snode->entry;
-            if (debug) printf("  %s: %s\n", entry->steam_id, entry->name);
+            if (debug) printf("  %s: %s\n", entry->info.steam.steam_id, entry->name);
             Entries_append(all_entries, entry);
             entries_changed = true;
             download_images_count++;
@@ -396,14 +459,14 @@ bool Entries_save(const char * path) {
         g_key_file_set_boolean(ini, e->id, "favorite", e->favorite);
         if (e->last_ran)
             g_key_file_set_string(ini, e->id, "last_ran", e->last_ran);
-        if (e->exec)
-            g_key_file_set_string(ini, e->id, "exec", e->exec);
-        if (e->cd)
-            g_key_file_set_string(ini, e->id, "cd", e->cd);
-        if (e->steam_id) {
-            g_key_file_set_string(ini, e->id, "steam_id", e->steam_id);
+        if (e->info.shell.exec)
+            g_key_file_set_string(ini, e->id, "exec", e->info.shell.exec);
+        if (e->info.shell.cd)
+            g_key_file_set_string(ini, e->id, "cd", e->info.shell.cd);
+        if (e->info.steam.steam_id) {
+            g_key_file_set_string(ini, e->id, "steam_id", e->info.steam.steam_id);
             g_key_file_set_boolean(ini, e->id,
-                "downloaded_image", e->downloaded_image
+                "downloaded_image", e->info.steam.downloaded_image
             );
         }
     }

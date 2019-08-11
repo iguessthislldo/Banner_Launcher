@@ -8,10 +8,42 @@
 
 /* ===========================================================================
  * Represents a Launchable Entry
- *
- * Entires must have an id, name, image_path, and either a exec or a steam_id.
- * cd is optional and is ignored if it is a steam entry.
  */
+
+typedef enum Entry_Type_enum Entry_Type;
+enum Entry_Type_enum {
+    ENTRY_TYPE_INVALID = 0,
+    ENTRY_TYPE_SHELL,
+    ENTRY_TYPE_STEAM,
+    ENTRY_TYPE_XDG,
+
+    ENTRY_TYPE_COUNT
+};
+
+const char const * entry_type_names[ENTRY_TYPE_COUNT];
+
+// Specific Info for Entires Run through Shell
+typedef struct Entry_Type_Info_Shell_struct Entry_Type_Info_Shell;
+struct Entry_Type_Info_Shell_struct {
+    char * exec;
+    char * cd;
+};
+
+// Specific Info for Steam Entires
+// Run through "steam steam://run/<appid>"
+typedef struct Entry_Type_Info_Steam_struct Entry_Type_Info_Steam;
+struct Entry_Type_Info_Steam_struct {
+    char * steam_id;
+    bool downloaded_image;
+};
+
+// Specific Info for Entries
+typedef union Entry_Type_Info_union Entry_Type_Info;
+union Entry_Type_Info_union {
+    Entry_Type_Info_Shell shell;
+    Entry_Type_Info_Steam steam;
+};
+
 typedef struct Entry_struct Entry;
 struct Entry_struct {
     /*
@@ -28,13 +60,9 @@ struct Entry_struct {
     bool favorite;
     char * last_ran; // As YYYYMMDDhhmmss
 
-    // Run through exec
-    char * exec;
-    char * cd;
-
-    // Run through "steam steam://run/<appid>"
-    char * steam_id;
-    bool downloaded_image;
+    // How it is ran
+    Entry_Type type;
+    Entry_Type_Info info;
 
     /*
      * Runtime

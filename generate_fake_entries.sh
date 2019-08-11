@@ -13,7 +13,8 @@ name=Entry $1
 image=$1.png
 count=$(expr $n - $1)
 favorite=false
-exec=true"
+type=shell
+exec=true
 EOF
     convert \
         -size 460x215 \

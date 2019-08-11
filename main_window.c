@@ -251,7 +251,7 @@ gpointer download_thread(gpointer data) {
 
     for (Node * node = all_entries->head; node; node = node->next) {
         Entry * entry = node->entry;
-        if (entry->steam_id && !entry->downloaded_image) {
+        if (entry->type = ENTRY_TYPE_STEAM && !entry->info.steam.downloaded_image) {
             gtk_progress_bar_set_text(GTK_PROGRESS_BAR(dl_bar), entry->name);
             char * path = g_build_filename(
                 banners_dir,
@@ -259,7 +259,7 @@ gpointer download_thread(gpointer data) {
             NULL);
 
             // Build URL
-            unsigned steam_id_len = strlen(entry->steam_id);
+            unsigned steam_id_len = strlen(entry->info.steam.steam_id);
             char * url = malloc(
                 steam_header_url_head_len +
                 steam_header_url_tail_len +
@@ -267,13 +267,13 @@ gpointer download_thread(gpointer data) {
             );
             sprintf(url, "%s%s%s",
                 steam_header_url_head,
-                entry->steam_id,
+                entry->info.steam.steam_id,
                 steam_header_url_tail
             );
 
             // Download
             if (debug) printf("  Download %s\n    to %s\n", url, path);
-            entry->downloaded_image = !download(NULL, NULL, url, path);
+            entry->info.steam.downloaded_image = !download(NULL, NULL, url, path);
             entries_changed = true;
             gtk_progress_bar_set_fraction(
                 GTK_PROGRESS_BAR(dl_bar),

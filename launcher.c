@@ -159,7 +159,9 @@ void init_data() {
     // Load files
     all_entries = Entries_new();
     visable_entries = NULL;
-    Entries_load(all_entries, entries_file);
+    if (Entries_load(all_entries, entries_file)) {
+        exit(1);
+    }
     steam_entries = Entries_new();
     load_config(config_file);
     load_steam_entries();

@@ -129,7 +129,7 @@ void load_steam_entries() {
         if (debug) printf("  %s: %s\n", id->str, name->str);
         Entry * entry = Entry_new();
         Entry_set_name(entry, name->str);
-        entry->steam_id = g_strdup(id->str);
+        entry->info.steam.steam_id = g_strdup(id->str);
         Entries_append(steam_entries, entry);
 
         // Clean up on Entry
