@@ -1,4 +1,4 @@
-# Generate a Random Color and it's invert for Image Magik convert
+# Generate a Random Color and its invert for Image Magik convert
 from random import randint
 
 def fmt(color):
@@ -6,6 +6,5 @@ def fmt(color):
 
 mask = 0xFFFFFF
 color = randint(0, mask)
-invert = (~color)&mask
+invert = (~color) & mask
 print("-fill {} -background {}".format(fmt(color), fmt(invert)))
-
