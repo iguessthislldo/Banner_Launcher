@@ -3,7 +3,7 @@
 
 #include "Entry.h"
 
-#define STEAM_HEADER_URL_HEAD "http://cdn.akamai.steamstatic.com/steam/apps/"
+#define STEAM_HEADER_URL_HEAD "https://steamcdn-a.akamaihd.net/steam/apps/"
 #define STEAM_HEADER_URL_TAIL "/header.jpg"
 
 char * steam_header_url_head;
